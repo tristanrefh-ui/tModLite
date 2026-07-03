@@ -11,6 +11,11 @@ endif()
 
 add_subdirectory(src/core)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    add_subdirectory(src/platform/ios)
+endif()
+
 if(NOT CMAKE_SYSTEM_NAME MATCHES "iOS|Android")
     add_subdirectory(src/sim)
+    add_subdirectory(tools/dylib_load_test)
 endif()

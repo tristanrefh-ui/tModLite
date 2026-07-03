@@ -35,14 +35,22 @@ cmake -S "$REPO_ROOT" -B "$BUILD_DIR" \
     -DPLATFORM="$PLATFORM" \
     -DDEPLOYMENT_TARGET="$DEPLOYMENT_TARGET"
 
-echo "Baue tml_core..."
-cmake --build "$BUILD_DIR" --target tml_core
+echo "Baue tml_core und tml_ios_bootstrap..."
+cmake --build "$BUILD_DIR" --target tml_core --target tml_ios_bootstrap
 
-LIB_PATH=$(find "$BUILD_DIR" -name "libtml_core.a" -print -quit)
-if [[ -z "$LIB_PATH" ]]; then
+CORE_LIB_PATH=$(find "$BUILD_DIR" -name "libtml_core.a" -print -quit)
+if [[ -z "$CORE_LIB_PATH" ]]; then
     echo "Fehler: libtml_core.a wurde nicht gefunden." >&2
     exit 1
 fi
 
+BOOTSTRAP_LIB_PATH=$(find "$BUILD_DIR" -name "libtml_ios_bootstrap.dylib" -print -quit)
+if [[ -z "$BOOTSTRAP_LIB_PATH" ]]; then
+    echo "Fehler: libtml_ios_bootstrap.dylib wurde nicht gefunden." >&2
+    exit 1
+fi
+
 echo ""
-echo "iOS-Build erfolgreich: $LIB_PATH"
+echo "iOS-Build erfolgreich:"
+echo "  Core:      $CORE_LIB_PATH"
+echo "  Bootstrap: $BOOTSTRAP_LIB_PATH"
