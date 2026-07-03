@@ -1,0 +1,4 @@
+build/
+build-ios/
+build-android/
+cmake-build-*/

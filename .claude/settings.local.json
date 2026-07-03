@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmake --build build)",
+      "Bash(cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug)",
+      "Bash(./build/src/sim/tml_sim)",
+      "Bash(chmod +x \"/Users/devrim/Dev/C++/Cpp-tModLite/scripts/build-ios.sh\" \"/Users/devrim/Dev/C++/Cpp-tModLite/scripts/build-android.sh\")",
+      "Bash(cmake -S . -B build)",
+      "Bash(./scripts/build-android.sh)",
+      "Bash(echo \"exit code: $?\")"
+    ]
+  }
+}
