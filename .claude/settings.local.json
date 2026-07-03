@@ -7,7 +7,16 @@
       "Bash(chmod +x \"/Users/devrim/Dev/C++/Cpp-tModLite/scripts/build-ios.sh\" \"/Users/devrim/Dev/C++/Cpp-tModLite/scripts/build-android.sh\")",
       "Bash(cmake -S . -B build)",
       "Bash(./scripts/build-android.sh)",
-      "Bash(echo \"exit code: $?\")"
+      "Bash(echo \"exit code: $?\")",
+      "Bash(./build/tools/dylib_load_test/dylib_load_test)",
+      "Bash(bash -n scripts/build-ios.sh)",
+      "Bash(./scripts/build-ios.sh)",
+      "Bash(otool -l build-ios/src/platform/ios/libtml_ios_bootstrap.dylib)",
+      "Bash(nm build-ios/src/platform/ios/libtml_ios_bootstrap.dylib)",
+      "Bash(otool -s __DATA_CONST __mod_init_func build-ios/src/platform/ios/libtml_ios_bootstrap.dylib)",
+      "Bash(otool -s __DATA __mod_init_func build-ios/src/platform/ios/libtml_ios_bootstrap.dylib)",
+      "Bash(otool -s __TEXT __init_offsets build-ios/src/platform/ios/libtml_ios_bootstrap.dylib)",
+      "Bash(otool -L build-ios/src/platform/ios/libtml_ios_bootstrap.dylib)"
     ]
   }
 }
