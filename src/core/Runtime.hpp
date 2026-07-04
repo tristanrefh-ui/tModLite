@@ -16,6 +16,7 @@ public:
     void registerMod(std::unique_ptr<Mod> mod);
 
     GameContext& context();
+    ModLoader& modLoader();
 
 private:
     GameContext context_;

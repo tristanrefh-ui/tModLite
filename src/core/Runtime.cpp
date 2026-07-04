@@ -27,4 +27,8 @@ GameContext& Runtime::context() {
     return context_;
 }
 
+ModLoader& Runtime::modLoader() {
+    return modLoader_;
+}
+
 } // namespace tml

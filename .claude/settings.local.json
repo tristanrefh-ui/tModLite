@@ -16,7 +16,12 @@
       "Bash(otool -s __DATA_CONST __mod_init_func build-ios/src/platform/ios/libtml_ios_bootstrap.dylib)",
       "Bash(otool -s __DATA __mod_init_func build-ios/src/platform/ios/libtml_ios_bootstrap.dylib)",
       "Bash(otool -s __TEXT __init_offsets build-ios/src/platform/ios/libtml_ios_bootstrap.dylib)",
-      "Bash(otool -L build-ios/src/platform/ios/libtml_ios_bootstrap.dylib)"
+      "Bash(otool -L build-ios/src/platform/ios/libtml_ios_bootstrap.dylib)",
+      "Bash(xcrun simctl *)",
+      "Bash(SIMCTL_CHILD_DYLD_INSERT_LIBRARIES=/Users/devrim/Dev/C++/Cpp-tModLite/build-ios-sim/src/platform/ios/libtml_ios_bootstrap.dylib xcrun simctl launch 228FDBFD-BC6E-4ED5-A217-22F465EEF8FE com.tmodlite.testharness)",
+      "Read(//Applications/**)",
+      "Read(//Users/devrim/Library/Application Support/**)",
+      "Bash(mdfind \"kMDItemFSName == 'il2cpp-api-functions.h'\")"
     ]
   }
 }

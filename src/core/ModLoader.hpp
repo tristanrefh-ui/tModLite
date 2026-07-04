@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstddef>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "Mod.hpp"
@@ -17,8 +19,19 @@ public:
     void updateAll(GameContext& context);
     void unloadAll(GameContext& context);
 
+    std::size_t modCount() const;
+    std::string modName(std::size_t index) const;
+    std::string modVersion(std::size_t index) const;
+    bool isModEnabled(std::size_t index) const;
+    void setModEnabled(std::size_t index, bool enabled);
+
 private:
-    std::vector<std::unique_ptr<Mod>> mods_;
+    struct Entry {
+        std::unique_ptr<Mod> mod;
+        bool enabled = true;
+    };
+
+    std::vector<Entry> mods_;
 };
 
 } // namespace tml
