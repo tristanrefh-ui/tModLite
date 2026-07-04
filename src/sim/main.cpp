@@ -1,4 +1,5 @@
 #include <chrono>
+#include <cstddef>
 #include <cstdio>
 #include <memory>
 #include <random>
@@ -60,6 +61,14 @@ void renderFrame(const tml::GameContext& context, int tick) {
 int main() {
     tml::Runtime runtime;
     runtime.registerMod(std::make_unique<tml::sim::MovementMod>());
+
+    std::size_t foundMods = runtime.modLoader().scanDirectory("mods/");
+    std::printf("[sim] ModLoader::scanDirectory(\"mods/\") -> %zu Mods gefunden\n", foundMods);
+    for (std::size_t i = 0; i < runtime.modLoader().modCount(); ++i) {
+        std::printf("[sim]   - %s (v%s) enabled=%s\n", runtime.modLoader().modName(i).c_str(),
+                    runtime.modLoader().modVersion(i).c_str(),
+                    runtime.modLoader().isModEnabled(i) ? "true" : "false");
+    }
 
     tml::GameContext& context = runtime.context();
     context.world.name = "TestWorld";

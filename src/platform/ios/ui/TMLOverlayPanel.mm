@@ -1,5 +1,7 @@
 #import "TMLOverlayPanel.h"
 
+#import "TMLOutlinedLabel.h"
+#import "TMLSettingsRow.h"
 #import "TMLTheme.h"
 
 @implementation TMLOverlayModRow
@@ -16,7 +18,7 @@
 
 @interface TMLOverlayPanel ()
 
-@property (nonatomic, strong) UIStackView *modListStack;
+@property (nonatomic, strong) UIStackView *rowStack;
 
 @end
 
@@ -34,125 +36,135 @@
 }
 
 - (void)configureAppearance {
-    self.backgroundColor = [TMLTheme woodDarkColor];
-    self.layer.cornerRadius = 12.0;
-    self.layer.borderWidth = 2.5;
-    self.layer.borderColor = [TMLTheme woodLightColor].CGColor;
+    self.backgroundColor = [TMLTheme panelBackgroundColor];
+    self.layer.cornerRadius = 14.0;
+    self.layer.borderWidth = 3.5;
+    self.layer.borderColor = [TMLTheme panelBorderColor].CGColor;
     self.clipsToBounds = YES;
 }
 
 - (void)configureContent {
-    UILabel *titleLabel = [[UILabel alloc] init];
-    titleLabel.attributedText = [TMLTheme outlinedTitleWithText:@"TModLite" fontSize:18.0];
-    titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    UIView *titlePill = [[UIView alloc] init];
+    titlePill.translatesAutoresizingMaskIntoConstraints = NO;
+    titlePill.backgroundColor = [TMLTheme titlePillColor];
+    [self addSubview:titlePill];
 
-    UIButton *closeButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    [closeButton setAttributedTitle:[TMLTheme outlinedTitleWithText:@"x" fontSize:18.0]
-                            forState:UIControlStateNormal];
-    closeButton.translatesAutoresizingMaskIntoConstraints = NO;
-    [closeButton addTarget:self action:@selector(handleClose) forControlEvents:UIControlEventTouchUpInside];
+    TMLOutlinedLabel *titleLabel = [[TMLOutlinedLabel alloc] init];
+    titleLabel.text = @"TModLite";
+    titleLabel.font = [TMLTheme chalkboardFontOfSize:20.0];
+    titleLabel.textAlignment = NSTextAlignmentCenter;
+    [titlePill addSubview:titleLabel];
 
-    UIView *headerSeparator = [[UIView alloc] init];
-    headerSeparator.backgroundColor = [TMLTheme woodLightColor];
-    headerSeparator.translatesAutoresizingMaskIntoConstraints = NO;
+    UIStackView *rowStack = [[UIStackView alloc] init];
+    rowStack.axis = UILayoutConstraintAxisVertical;
+    rowStack.spacing = 10.0;
+    rowStack.translatesAutoresizingMaskIntoConstraints = NO;
+    self.rowStack = rowStack;
+    [self addSubview:rowStack];
 
-    UIStackView *modListStack = [[UIStackView alloc] init];
-    modListStack.axis = UILayoutConstraintAxisVertical;
-    modListStack.spacing = 10.0;
-    modListStack.translatesAutoresizingMaskIntoConstraints = NO;
-    self.modListStack = modListStack;
-
-    [self addSubview:titleLabel];
-    [self addSubview:closeButton];
-    [self addSubview:headerSeparator];
-    [self addSubview:modListStack];
+    UIView *backButton = [self buildBackButton];
+    [self addSubview:backButton];
 
     [NSLayoutConstraint activateConstraints:@[
-        [titleLabel.topAnchor constraintEqualToAnchor:self.topAnchor constant:14.0],
-        [titleLabel.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16.0],
+        [titlePill.topAnchor constraintEqualToAnchor:self.topAnchor constant:16.0],
+        [titlePill.centerXAnchor constraintEqualToAnchor:self.centerXAnchor],
+        [titlePill.heightAnchor constraintEqualToConstant:36.0],
 
-        [closeButton.centerYAnchor constraintEqualToAnchor:titleLabel.centerYAnchor],
-        [closeButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-12.0],
-        [closeButton.leadingAnchor constraintGreaterThanOrEqualToAnchor:titleLabel.trailingAnchor constant:8.0],
+        [titleLabel.leadingAnchor constraintEqualToAnchor:titlePill.leadingAnchor constant:24.0],
+        [titleLabel.trailingAnchor constraintEqualToAnchor:titlePill.trailingAnchor constant:-24.0],
+        [titleLabel.centerYAnchor constraintEqualToAnchor:titlePill.centerYAnchor],
 
-        [headerSeparator.topAnchor constraintEqualToAnchor:titleLabel.bottomAnchor constant:12.0],
-        [headerSeparator.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16.0],
-        [headerSeparator.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16.0],
-        [headerSeparator.heightAnchor constraintEqualToConstant:1.0],
+        [rowStack.topAnchor constraintEqualToAnchor:titlePill.bottomAnchor constant:20.0],
+        [rowStack.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16.0],
+        [rowStack.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16.0],
 
-        [modListStack.topAnchor constraintEqualToAnchor:headerSeparator.bottomAnchor constant:14.0],
-        [modListStack.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16.0],
-        [modListStack.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16.0],
-        [modListStack.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-16.0],
-
-        [self.widthAnchor constraintEqualToConstant:260.0],
+        [backButton.topAnchor constraintEqualToAnchor:rowStack.bottomAnchor constant:20.0],
+        [backButton.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16.0],
+        [backButton.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-16.0],
     ]];
 }
 
-- (void)handleClose {
+- (UIView *)buildBackButton {
+    UIView *backButton = [[UIView alloc] init];
+    backButton.translatesAutoresizingMaskIntoConstraints = NO;
+    backButton.backgroundColor = [TMLTheme rowBackgroundColor];
+    backButton.layer.cornerRadius = 10.0;
+    backButton.clipsToBounds = YES;
+    backButton.userInteractionEnabled = YES;
+
+    UIView *arrowView = [[UIView alloc] init];
+    arrowView.translatesAutoresizingMaskIntoConstraints = NO;
+    arrowView.backgroundColor = [UIColor clearColor];
+
+    CAShapeLayer *arrowLayer = [CAShapeLayer layer];
+    arrowLayer.fillColor = [TMLTheme backArrowColor].CGColor;
+    UIBezierPath *arrowPath = [UIBezierPath bezierPath];
+    [arrowPath moveToPoint:CGPointMake(14, 0)];
+    [arrowPath addLineToPoint:CGPointMake(14, 16)];
+    [arrowPath addLineToPoint:CGPointMake(0, 8)];
+    [arrowPath closePath];
+    arrowLayer.path = arrowPath.CGPath;
+    arrowLayer.frame = CGRectMake(0, 0, 14, 16);
+    [arrowView.layer addSublayer:arrowLayer];
+
+    TMLOutlinedLabel *backLabel = [[TMLOutlinedLabel alloc] init];
+    backLabel.text = @"Zurueck";
+    backLabel.font = [TMLTheme chalkboardFontOfSize:16.0];
+
+    [backButton addSubview:arrowView];
+    [backButton addSubview:backLabel];
+
+    UITapGestureRecognizer *backTap = [[UITapGestureRecognizer alloc] initWithTarget:self
+                                                                               action:@selector(handleBackTap)];
+    [backButton addGestureRecognizer:backTap];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [backButton.heightAnchor constraintEqualToConstant:44.0],
+        [backButton.widthAnchor constraintEqualToConstant:132.0],
+
+        [arrowView.leadingAnchor constraintEqualToAnchor:backButton.leadingAnchor constant:14.0],
+        [arrowView.centerYAnchor constraintEqualToAnchor:backButton.centerYAnchor],
+        [arrowView.widthAnchor constraintEqualToConstant:14.0],
+        [arrowView.heightAnchor constraintEqualToConstant:16.0],
+
+        [backLabel.leadingAnchor constraintEqualToAnchor:arrowView.trailingAnchor constant:8.0],
+        [backLabel.centerYAnchor constraintEqualToAnchor:backButton.centerYAnchor],
+    ]];
+
+    return backButton;
+}
+
+- (void)handleBackTap {
     if (self.onClose) {
         self.onClose();
     }
 }
 
 - (void)setModRows:(NSArray<TMLOverlayModRow *> *)modRows {
-    for (UIView *rowView in self.modListStack.arrangedSubviews.copy) {
-        [self.modListStack removeArrangedSubview:rowView];
+    for (UIView *rowView in self.rowStack.arrangedSubviews.copy) {
+        [self.rowStack removeArrangedSubview:rowView];
         [rowView removeFromSuperview];
     }
 
     if (modRows.count == 0) {
-        UILabel *emptyLabel = [[UILabel alloc] init];
+        TMLOutlinedLabel *emptyLabel = [[TMLOutlinedLabel alloc] init];
         emptyLabel.text = @"Keine Mods geladen";
-        emptyLabel.font = [TMLTheme bodyFont];
-        emptyLabel.textColor = [TMLTheme textMutedColor];
-        [self.modListStack addArrangedSubview:emptyLabel];
+        emptyLabel.font = [TMLTheme chalkboardFontOfSize:15.0];
+        emptyLabel.textAlignment = NSTextAlignmentCenter;
+        [self.rowStack addArrangedSubview:emptyLabel];
         return;
     }
 
     [modRows enumerateObjectsUsingBlock:^(TMLOverlayModRow *row, NSUInteger index, BOOL *stop) {
-        UIView *rowView = [self buildRowViewForMod:row atIndex:(NSInteger)index];
-        [self.modListStack addArrangedSubview:rowView];
+        TMLSettingsRow *rowView = [[TMLSettingsRow alloc] initWithTitle:row.name enabled:row.enabled];
+        __weak TMLOverlayPanel *weakSelf = self;
+        rowView.onToggle = ^(BOOL isOn) {
+            if (weakSelf.onToggleModAtIndex) {
+                weakSelf.onToggleModAtIndex((NSInteger)index, isOn);
+            }
+        };
+        [self.rowStack addArrangedSubview:rowView];
     }];
-}
-
-- (UIView *)buildRowViewForMod:(TMLOverlayModRow *)row atIndex:(NSInteger)index {
-    UIView *container = [[UIView alloc] init];
-    container.translatesAutoresizingMaskIntoConstraints = NO;
-
-    UILabel *nameLabel = [[UILabel alloc] init];
-    nameLabel.text = [NSString stringWithFormat:@"%@ (%@)", row.name, row.version];
-    nameLabel.font = [TMLTheme bodyFont];
-    nameLabel.textColor = [TMLTheme textLightColor];
-    nameLabel.translatesAutoresizingMaskIntoConstraints = NO;
-
-    UISwitch *toggle = [[UISwitch alloc] init];
-    toggle.on = row.enabled;
-    toggle.onTintColor = [TMLTheme accentGoldColor];
-    toggle.tag = index;
-    toggle.translatesAutoresizingMaskIntoConstraints = NO;
-    [toggle addTarget:self action:@selector(handleToggleChanged:) forControlEvents:UIControlEventValueChanged];
-
-    [container addSubview:nameLabel];
-    [container addSubview:toggle];
-
-    [NSLayoutConstraint activateConstraints:@[
-        [nameLabel.leadingAnchor constraintEqualToAnchor:container.leadingAnchor],
-        [nameLabel.centerYAnchor constraintEqualToAnchor:container.centerYAnchor],
-
-        [toggle.topAnchor constraintEqualToAnchor:container.topAnchor],
-        [toggle.bottomAnchor constraintEqualToAnchor:container.bottomAnchor],
-        [toggle.trailingAnchor constraintEqualToAnchor:container.trailingAnchor],
-        [toggle.leadingAnchor constraintGreaterThanOrEqualToAnchor:nameLabel.trailingAnchor constant:8.0],
-    ]];
-
-    return container;
-}
-
-- (void)handleToggleChanged:(UISwitch *)sender {
-    if (self.onToggleModAtIndex) {
-        self.onToggleModAtIndex(sender.tag, sender.isOn);
-    }
 }
 
 @end

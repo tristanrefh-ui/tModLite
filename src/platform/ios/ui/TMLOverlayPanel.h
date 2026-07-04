@@ -16,8 +16,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
-// Panel mit Titel, Close-Button und einer einfachen Mod-Liste (Name +
-// Toggle), im Terraria-anmutenden Holz-/Stein-Farbschema aus TMLTheme.
+// Grosses, zentriertes Settings-Panel im Stil von Terrarias echtem
+// Settings-Menu (siehe reference/terraria_menu.jpeg): Titel-Pille oben,
+// Mod-Liste als eigene Options-Zeilen mit Off/On-Toggle, Zurueck-Button
+// unten links mit rotem Pfeil-Icon (ruft onClose auf).
 @interface TMLOverlayPanel : UIView
 
 @property (nonatomic, copy, nullable) void (^onClose)(void);

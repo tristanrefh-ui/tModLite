@@ -2,6 +2,9 @@ add_library(tml_ios_bootstrap SHARED
     Bootstrap.mm
     Il2CppBridge.mm
     ui/TMLTheme.mm
+    ui/TMLOutlinedLabel.mm
+    ui/TMLSegmentedToggle.mm
+    ui/TMLSettingsRow.mm
     ui/TMLOverlayButton.mm
     ui/TMLOverlayManager.mm
     ui/TMLOverlayPanel.mm

@@ -67,9 +67,14 @@
     [panel setModRows:modRows];
     [rootView addSubview:panel];
 
+    // Grosses zentriertes Panel statt kleinem Trigger-nahen Popup - nimmt
+    // einen Grossteil des Screens ein, Breite prozentual zur Safe Area statt
+    // hartcodiert, damit es auf verschiedenen Geraetegroessen passt.
+    UILayoutGuide *safeArea = rootView.safeAreaLayoutGuide;
     [NSLayoutConstraint activateConstraints:@[
-        [panel.trailingAnchor constraintEqualToAnchor:trigger.trailingAnchor],
-        [panel.bottomAnchor constraintEqualToAnchor:trigger.topAnchor constant:-12.0],
+        [panel.centerXAnchor constraintEqualToAnchor:safeArea.centerXAnchor],
+        [panel.centerYAnchor constraintEqualToAnchor:safeArea.centerYAnchor],
+        [panel.widthAnchor constraintEqualToAnchor:safeArea.widthAnchor multiplier:0.85],
     ]];
 
     self.overlayWindow = window;

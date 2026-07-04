@@ -8,4 +8,6 @@ target_include_directories(tml_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+target_link_libraries(tml_core PRIVATE nlohmann_json::nlohmann_json)
+
 target_compile_features(tml_core PUBLIC cxx_std_17)
