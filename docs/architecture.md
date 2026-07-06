@@ -8,6 +8,7 @@ src/platform/ios/ iOS Adapter: dylib-Entry, Injection-Bootstrap, IL2CPP-Bridge, 
 src/platform/android/  Android Adapter (noch nicht implementiert)
 src/sim/          Simulation Harness zum Testen ohne echtes Spiel
 mods/             Mod-Ordner (Metadaten, siehe modloader.md)
+experimental/     Abgeschlossene Forschungs-/Testcode, nicht im aktiven Build
 ```
 
 **Harte Regel:** `src/core/` weiss nie, wie er injiziert wird. Kein iOS/Android-Code,
@@ -47,5 +48,18 @@ kennen keine C++-Core-Typen — sie bekommen fertige, einfache Objective-C-
 Objekte (`TMLOverlayModRow`) und Blocks uebergeben. Das haelt die UI
 wiederverwendbar und die Kopplungsstellen minimal.
 
+`TMLOverlayManager` haelt zwei Panels und zeigt je nach Spielzustand
+(`TML_IsGameMenuActive()`) genau eins davon: `TMLOverlayPanel` im
+Hauptmenue (aendert `menuMode`, zeigt die Mod-Liste mit Toggles) und
+`TMLInGamePanel` waehrend einer laufenden Welt (aendert nichts am
+Spielzustand, aktuell ein Platzhalter fuer zukuenftige In-Game-Features —
+siehe `roadmap.md`).
+
+`experimental/` liegt bewusst ausserhalb von `src/` — Code dort ist
+abgeschlossene, gescheiterte oder nicht mehr aktiv verfolgte Forschung (siehe
+`technical-limitations.md`), nicht Teil des Adapters und nicht im Build
+verdrahtet.
+
 Details zu den einzelnen Adapter-Mechanismen: `ios-injection.md`,
-`il2cpp-bridge.md`. Zum Mod-Scan: `modloader.md`. Zum Ausblick: `roadmap.md`.
+`il2cpp-bridge.md`. Zum Mod-Scan: `modloader.md`. Zu Grenzen: `technical-limitations.md`.
+Zum Ausblick: `roadmap.md`.

@@ -62,3 +62,12 @@ Erkenntnis kam aus echtem Debugging, siehe `il2cpp-bridge.md`.
 Testzyklus: `./scripts/build-ios.sh` → dylib neu einbetten/resignen via
 Feather → neu installieren → Console.app (Geraet auswaehlen, nach `[Il2CppBridge]`
 / `[iOS Bootstrap]` / `[TMLOverlayManager]` filtern).
+
+## Grenze dieses Injection-Wegs
+
+Dieser komplette Weg (Feather/`insert_dylib`, kein Jailbreak) erlaubt reines
+**Hinzufuegen** von Code (die eigene dylib) und **Aufrufen** bestehender
+Terraria-Methoden ueber die IL2CPP-Bridge — er erlaubt nicht das
+**Veraendern** von bestehendem Terraria-Code zur Laufzeit (Codesigning/W^X
+verhindert das unabhaengig vom gewaehlten Hooking-Ansatz). Details und
+getestete Ansaetze: `technical-limitations.md`.

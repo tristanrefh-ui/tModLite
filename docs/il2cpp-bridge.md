@@ -98,6 +98,31 @@ echte `il2cpp-api-functions.h` (separat besorgt) hat die Signaturen bestaetigt.
 
 ## Aktuelle finale API-Nutzung
 
-Nur noch `Terraria.Main.get_menuMode()` / `set_menuMode(int)`, einmalig pro
-Prozess aufgeloest und gecacht (`Il2CppBridge.mm`, `TML_SetMenuMode(int)`).
-Keine weiteren Terraria-Klassen mehr involviert.
+- `Terraria.Main.get_menuMode()` / `set_menuMode(int)`, einmalig pro Prozess
+  aufgeloest und gecacht (`Il2CppBridge.mm`, `TML_SetMenuMode(int)`).
+- `Terraria.Main.get_gameMenu()` (nur Getter, analog zur menuMode-Property,
+  siehe unten) — `TML_IsGameMenuActive()`.
+- `Terraria.Player`: `myPlayer`-Property, `Main.player`-Array-Feld,
+  `statLife`/`statLifeMax`-Instanzfelder — God-Mode-Poll (`TML_SetGodMode`).
+
+## gameMenu: Hauptmenue vs. laufende Welt unterscheiden
+
+Gleiches Muster wie bei `menuMode`: `gameMenu` ist ebenfalls eine
+C#-Auto-Property (`public static bool gameMenu { get; set; }`), wir nutzen
+nur den generierten Getter `get_gameMenu()`. Zweck: `TMLOverlayManager`
+muss beim Oeffnen des Overlays wissen, ob gerade das Hauptmenue oder eine
+laufende Welt aktiv ist, um das passende Panel zu zeigen (`TMLOverlayPanel`
+vs. `TMLInGamePanel` — siehe `architecture.md`). Kein Setter noetig, da wir
+den Zustand nur erkennen, nicht selbst umschalten wollen. Fallback bei nicht
+einsatzbereiter Bridge: `true` (im Zweifel wie Hauptmenue behandeln, der
+bestehende Settings-Panel-Pfad ist konservativer als das neuere,
+experimentellere In-Game-Panel).
+
+## Grenze: nur Aufrufe, kein Hooking
+
+Alles oben ist ein **Aufruf** bestehender Methoden — funktioniert
+zuverlaessig. Ein **Hook** (bestehendes Methodenverhalten aendern/umleiten)
+ist ein komplett anderes Problem und wurde separat untersucht, mit
+negativem Ergebnis auf echtem Geraet — siehe `technical-limitations.md` und
+`experimental/HookTest.mm`. Diese Bridge-Datei bleibt bewusst frei von
+Hooking-Code.
