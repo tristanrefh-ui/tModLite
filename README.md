@@ -1,4 +1,4 @@
-# TModLite
+# tModLite
 
 Native iOS modding runtime for **Terraria Mobile** — **no jailbreak
 required**. Not a tModLoader port: a lean, purpose-built runtime with a
@@ -44,11 +44,6 @@ device (Dobby inline hook, MethodInfo pointer swap), both failed. TModLite
 can **call** existing methods (God Mode, menuMode control), but not
 **change** their behavior. Details, tested approaches, and what this means
 for mod ideas: [docs/technical-limitations.md](docs/technical-limitations.md).
-
-## Screenshots
-
-*(Placeholder — add your own screenshots of the in-game overlay and the
-settings panel here once available.)*
 
 ## Prerequisites
 
