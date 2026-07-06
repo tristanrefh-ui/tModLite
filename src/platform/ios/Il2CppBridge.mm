@@ -194,6 +194,7 @@ struct CachedBridge {
     Il2CppClass* mainClass = nullptr;
     const MethodInfo* getMenuModeMethod = nullptr;
     const MethodInfo* setMenuModeMethod = nullptr;
+    const MethodInfo* getGameMenuMethod = nullptr;
 
     Il2CppClass* playerClass = nullptr;
     const MethodInfo* getMyPlayerMethod = nullptr;
@@ -203,6 +204,7 @@ struct CachedBridge {
 
     bool attempted = false;
     bool menuModeReady = false;
+    bool gameMenuReady = false;
     bool godModeReady = false;
 };
 
@@ -246,6 +248,13 @@ CachedBridge& GetCachedBridge() {
     NSLog(@"[Il2CppBridge] get_menuMode -> %s, set_menuMode -> %s",
           cached.getMenuModeMethod ? "OK" : "NULL", cached.setMenuModeMethod ? "OK" : "NULL");
     cached.menuModeReady = (cached.getMenuModeMethod != nullptr && cached.setMenuModeMethod != nullptr);
+
+    // gameMenu ist ebenfalls eine C#-Property (public static bool gameMenu
+    // { get; set; }) - wir brauchen nur den Getter, um Hauptmenue vs.
+    // laufende Welt zu unterscheiden.
+    cached.getGameMenuMethod = cached.api.class_get_method_from_name(mainClass, "get_gameMenu", 0);
+    NSLog(@"[Il2CppBridge] get_gameMenu -> %s", cached.getGameMenuMethod ? "OK" : "NULL");
+    cached.gameMenuReady = (cached.getGameMenuMethod != nullptr);
 
     // God-Mode-Bausteine: Terraria.Player finden, myPlayer-Property (Index in
     // Main.player), das Main.player-Array-Feld selbst, und die beiden
@@ -388,6 +397,29 @@ void TML_SetMenuMode(int value) {
 
     NSLog(@"[Il2CppBridge] Main.menuMode: alt=%d, gesetzt=%d, verifiziert=%d", oldMenuMode, value,
           verifyMenuMode);
+}
+
+bool TML_IsGameMenuActive() {
+    CachedBridge& bridge = GetCachedBridge();
+    if (!bridge.gameMenuReady) {
+        NSLog(@"[Il2CppBridge] TML_IsGameMenuActive: Bridge nicht einsatzbereit, Fallback=true (Hauptmenue).");
+        return true;
+    }
+
+    Il2CppException* exception = nullptr;
+    Il2CppObject* boxedResult =
+        bridge.api.runtime_invoke(bridge.getGameMenuMethod, nullptr, nullptr, &exception);
+    if (exception) {
+        LogException(bridge.api, exception, "get_gameMenu");
+        return true;
+    }
+    if (!boxedResult) {
+        NSLog(@"[Il2CppBridge] get_gameMenu() lieferte null, Fallback=true (Hauptmenue).");
+        return true;
+    }
+
+    bool isGameMenu = *static_cast<bool*>(bridge.api.object_unbox(boxedResult));
+    return isGameMenu;
 }
 
 void TML_SetGodMode(bool enabled) {

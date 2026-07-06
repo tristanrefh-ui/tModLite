@@ -11,6 +11,7 @@
 #include "GameContext.hpp"
 #include "Il2CppBridge.h"
 #include "ModLoader.hpp"
+#include "PlayerLoopTest.h"
 #include "Runtime.hpp"
 
 // Legt manifest.json fuer einen Test-Mod im Documents/mods-Ordner an, falls
@@ -61,6 +62,11 @@ static void tml_ios_bootstrap() {
 
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)),
                    dispatch_get_main_queue(), ^{
+        // Schritt A (reines Lesen, keine Mutation) des PlayerLoop-
+        // Experiments - siehe PlayerLoopTest.h. Laeuft automatisch beim
+        // Start, unabhaengig vom ModLoader/Overlay-Code unten.
+        TML_LogCurrentPlayerLoop();
+
         tml::ModLoader& modLoader = runtime.modLoader();
 
         // Mods leben (noch) in einem "mods"-Ordner im App-Documents-

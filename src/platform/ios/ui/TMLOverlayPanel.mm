@@ -1,5 +1,6 @@
 #import "TMLOverlayPanel.h"
 
+#import "TMLBackButton.h"
 #import "TMLOutlinedLabel.h"
 #import "TMLSettingsRow.h"
 #import "TMLTheme.h"
@@ -62,7 +63,13 @@
     self.rowStack = rowStack;
     [self addSubview:rowStack];
 
-    UIView *backButton = [self buildBackButton];
+    TMLBackButton *backButton = [[TMLBackButton alloc] init];
+    __weak TMLOverlayPanel *weakSelf = self;
+    backButton.onTap = ^{
+        if (weakSelf.onClose) {
+            weakSelf.onClose();
+        }
+    };
     [self addSubview:backButton];
 
     [NSLayoutConstraint activateConstraints:@[
@@ -82,62 +89,6 @@
         [backButton.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16.0],
         [backButton.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-16.0],
     ]];
-}
-
-- (UIView *)buildBackButton {
-    UIView *backButton = [[UIView alloc] init];
-    backButton.translatesAutoresizingMaskIntoConstraints = NO;
-    backButton.backgroundColor = [TMLTheme rowBackgroundColor];
-    backButton.layer.cornerRadius = 10.0;
-    backButton.clipsToBounds = YES;
-    backButton.userInteractionEnabled = YES;
-
-    UIView *arrowView = [[UIView alloc] init];
-    arrowView.translatesAutoresizingMaskIntoConstraints = NO;
-    arrowView.backgroundColor = [UIColor clearColor];
-
-    CAShapeLayer *arrowLayer = [CAShapeLayer layer];
-    arrowLayer.fillColor = [TMLTheme backArrowColor].CGColor;
-    UIBezierPath *arrowPath = [UIBezierPath bezierPath];
-    [arrowPath moveToPoint:CGPointMake(14, 0)];
-    [arrowPath addLineToPoint:CGPointMake(14, 16)];
-    [arrowPath addLineToPoint:CGPointMake(0, 8)];
-    [arrowPath closePath];
-    arrowLayer.path = arrowPath.CGPath;
-    arrowLayer.frame = CGRectMake(0, 0, 14, 16);
-    [arrowView.layer addSublayer:arrowLayer];
-
-    TMLOutlinedLabel *backLabel = [[TMLOutlinedLabel alloc] init];
-    backLabel.text = @"Zurueck";
-    backLabel.font = [TMLTheme chalkboardFontOfSize:16.0];
-
-    [backButton addSubview:arrowView];
-    [backButton addSubview:backLabel];
-
-    UITapGestureRecognizer *backTap = [[UITapGestureRecognizer alloc] initWithTarget:self
-                                                                               action:@selector(handleBackTap)];
-    [backButton addGestureRecognizer:backTap];
-
-    [NSLayoutConstraint activateConstraints:@[
-        [backButton.heightAnchor constraintEqualToConstant:44.0],
-        [backButton.widthAnchor constraintEqualToConstant:132.0],
-
-        [arrowView.leadingAnchor constraintEqualToAnchor:backButton.leadingAnchor constant:14.0],
-        [arrowView.centerYAnchor constraintEqualToAnchor:backButton.centerYAnchor],
-        [arrowView.widthAnchor constraintEqualToConstant:14.0],
-        [arrowView.heightAnchor constraintEqualToConstant:16.0],
-
-        [backLabel.leadingAnchor constraintEqualToAnchor:arrowView.trailingAnchor constant:8.0],
-        [backLabel.centerYAnchor constraintEqualToAnchor:backButton.centerYAnchor],
-    ]];
-
-    return backButton;
-}
-
-- (void)handleBackTap {
-    if (self.onClose) {
-        self.onClose();
-    }
 }
 
 - (void)setModRows:(NSArray<TMLOverlayModRow *> *)modRows {

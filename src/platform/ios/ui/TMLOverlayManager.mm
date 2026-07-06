@@ -1,17 +1,28 @@
 #import "TMLOverlayManager.h"
 
+#import "TMLInGamePanel.h"
 #import "TMLOverlayButton.h"
 #import "TMLOverlayViewController.h"
 #import "TMLOverlayWindow.h"
 
 #include "../Il2CppBridge.h"
 
+// Welches der beiden Panels (falls ueberhaupt eins) gerade sichtbar ist -
+// gebraucht, weil nur das Hauptmenue-Settings-Panel menuMode aendert, das
+// In-Game-Panel bewusst nicht.
+typedef NS_ENUM(NSInteger, TMLActivePanel) {
+    TMLActivePanelNone,
+    TMLActivePanelSettings,
+    TMLActivePanelInGame,
+};
+
 @interface TMLOverlayManager ()
 
 @property (nonatomic, strong, nullable) TMLOverlayWindow *overlayWindow;
 @property (nonatomic, strong, nullable) TMLOverlayButton *triggerLabel;
-@property (nonatomic, strong, nullable) TMLOverlayPanel *panel;
-@property (nonatomic, assign) BOOL panelVisible;
+@property (nonatomic, strong, nullable) TMLOverlayPanel *settingsPanel;
+@property (nonatomic, strong, nullable) TMLInGamePanel *inGamePanel;
+@property (nonatomic, assign) TMLActivePanel activePanel;
 
 @end
 
@@ -54,60 +65,101 @@
     };
     [rootView addSubview:trigger];
 
-    TMLOverlayPanel *panel = [[TMLOverlayPanel alloc] init];
-    panel.alpha = 0.0;
-    panel.hidden = YES;
-    panel.onClose = ^{
-        // Close-Button schliesst immer (im Gegensatz zum Trigger-Tap, der
-        // toggelt) - menuMode geht also immer zurueck auf 0.
-        TML_SetMenuMode(0);
-        [weakSelf togglePanel];
+    TMLOverlayPanel *settingsPanel = [[TMLOverlayPanel alloc] init];
+    settingsPanel.alpha = 0.0;
+    settingsPanel.hidden = YES;
+    settingsPanel.onClose = ^{
+        [weakSelf closeActivePanel];
     };
-    panel.onToggleModAtIndex = onToggleModAtIndex;
-    [panel setModRows:modRows];
-    [rootView addSubview:panel];
+    settingsPanel.onToggleModAtIndex = onToggleModAtIndex;
+    [settingsPanel setModRows:modRows];
+    [rootView addSubview:settingsPanel];
 
-    // Grosses zentriertes Panel statt kleinem Trigger-nahen Popup - nimmt
-    // einen Grossteil des Screens ein, Breite prozentual zur Safe Area statt
-    // hartcodiert, damit es auf verschiedenen Geraetegroessen passt.
+    TMLInGamePanel *inGamePanel = [[TMLInGamePanel alloc] init];
+    inGamePanel.alpha = 0.0;
+    inGamePanel.hidden = YES;
+    inGamePanel.onClose = ^{
+        [weakSelf closeActivePanel];
+    };
+    [rootView addSubview:inGamePanel];
+
+    // Beide Panels teilen sich dieselbe grosse, zentrierte Positionierung -
+    // es ist immer nur eins von beiden gleichzeitig sichtbar.
     UILayoutGuide *safeArea = rootView.safeAreaLayoutGuide;
-    [NSLayoutConstraint activateConstraints:@[
-        [panel.centerXAnchor constraintEqualToAnchor:safeArea.centerXAnchor],
-        [panel.centerYAnchor constraintEqualToAnchor:safeArea.centerYAnchor],
-        [panel.widthAnchor constraintEqualToAnchor:safeArea.widthAnchor multiplier:0.85],
-    ]];
+    for (UIView *panelView in @[settingsPanel, inGamePanel]) {
+        [NSLayoutConstraint activateConstraints:@[
+            [panelView.centerXAnchor constraintEqualToAnchor:safeArea.centerXAnchor],
+            [panelView.centerYAnchor constraintEqualToAnchor:safeArea.centerYAnchor],
+            [panelView.widthAnchor constraintEqualToAnchor:safeArea.widthAnchor multiplier:0.85],
+        ]];
+    }
 
     self.overlayWindow = window;
     self.triggerLabel = trigger;
-    self.panel = panel;
+    self.settingsPanel = settingsPanel;
+    self.inGamePanel = inGamePanel;
 
     NSLog(@"[TMLOverlayManager] Overlay-Trigger installiert (%lu Mods)", (unsigned long)modRows.count);
 }
 
 - (void)handleTriggerTap {
-    // Vor togglePanel bestimmen, ob wir gerade oeffnen oder schliessen -
-    // togglePanel selbst kippt panelVisible.
-    BOOL willOpen = !self.panelVisible;
-    NSLog(@"[TMLOverlayManager] Tap erkannt - %@", willOpen ? @"oeffne Panel (menuMode=10)"
-                                                             : @"schliesse Panel (menuMode=0)");
-    TML_SetMenuMode(willOpen ? 10 : 0);
-    [self togglePanel];
-}
-
-- (void)togglePanel {
-    if (!self.panel) {
+    if (self.activePanel != TMLActivePanelNone) {
+        NSLog(@"[TMLOverlayManager] Tap erkannt - schliesse aktives Panel");
+        [self closeActivePanel];
         return;
     }
 
-    BOOL willShow = !self.panelVisible;
-    self.panelVisible = willShow;
+    // Kontext bei jedem Oeffnen neu bestimmen: Hauptmenue bekommt das
+    // bestehende Settings-Panel (menuMode=10, wie bisher), eine laufende
+    // Welt bekommt das neue In-Game-Panel (menuMode bleibt unangetastet,
+    // das Spiel laeuft im Hintergrund normal weiter).
+    BOOL inMainMenu = TML_IsGameMenuActive();
+    NSLog(@"[TMLOverlayManager] Tap erkannt - %@",
+          inMainMenu ? @"Hauptmenue erkannt, oeffne Settings-Panel (menuMode=10)"
+                     : @"In-Game erkannt, oeffne In-Game-Panel (menuMode unveraendert)");
 
-    if (willShow) {
-        self.panel.hidden = NO;
-        self.panel.transform = CGAffineTransformMakeScale(0.85, 0.85);
+    if (inMainMenu) {
+        TML_SetMenuMode(10);
+        [self showPanel:self.settingsPanel asActive:TMLActivePanelSettings];
+    } else {
+        [self showPanel:self.inGamePanel asActive:TMLActivePanelInGame];
+    }
+}
+
+- (void)closeActivePanel {
+    UIView *panelToHide = nil;
+    switch (self.activePanel) {
+        case TMLActivePanelSettings:
+            TML_SetMenuMode(0);
+            panelToHide = self.settingsPanel;
+            break;
+        case TMLActivePanelInGame:
+            panelToHide = self.inGamePanel;
+            break;
+        case TMLActivePanelNone:
+            return;
     }
 
-    __weak TMLOverlayPanel *weakPanel = self.panel;
+    self.activePanel = TMLActivePanelNone;
+    [self animatePanel:panelToHide show:NO];
+}
+
+- (void)showPanel:(UIView *)panelView asActive:(TMLActivePanel)activePanel {
+    self.activePanel = activePanel;
+    [self animatePanel:panelView show:YES];
+}
+
+- (void)animatePanel:(UIView *)panelView show:(BOOL)willShow {
+    if (!panelView) {
+        return;
+    }
+
+    if (willShow) {
+        panelView.hidden = NO;
+        panelView.transform = CGAffineTransformMakeScale(0.85, 0.85);
+    }
+
+    __weak UIView *weakPanel = panelView;
     [UIView animateWithDuration:0.22
                           delay:0
          usingSpringWithDamping:0.85

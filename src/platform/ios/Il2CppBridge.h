@@ -13,3 +13,12 @@ void TML_SetMenuMode(int value);
 // nativer Poll-Timer (alle 500ms), der Player.statLife auf Player.statLifeMax
 // setzt, solange enabled=true ist. Kein Main.OnTick-Hook noetig.
 void TML_SetGodMode(bool enabled);
+
+// Liest Terraria.Main.gameMenu (Property, get_gameMenu(), analog zu
+// menuMode). true = Hauptmenue/Ladebildschirme, false = aktiv in einer
+// laufenden Welt. Nur lesend, kein Setter noetig - wir wollen den
+// Spielzustand nur erkennen, nicht selbst umschalten.
+// Fallback bei nicht einsatzbereiter Bridge: true (im Zweifel wie
+// Hauptmenue behandeln, das bestehende, bereits verifizierte Settings-
+// Panel ist der konservativere Pfad als das neue In-Game-Panel).
+bool TML_IsGameMenuActive();
