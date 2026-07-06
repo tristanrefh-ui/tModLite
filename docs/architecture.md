@@ -1,65 +1,65 @@
 # Architecture
 
-## Grundprinzip
+## Basic principle
 
 ```
-src/core/         Shared Core (C++17, plattformunabhaengig)
-src/platform/ios/ iOS Adapter: dylib-Entry, Injection-Bootstrap, IL2CPP-Bridge, native UI
-src/platform/android/  Android Adapter (noch nicht implementiert)
-src/sim/          Simulation Harness zum Testen ohne echtes Spiel
-mods/             Mod-Ordner (Metadaten, siehe modloader.md)
-experimental/     Abgeschlossene Forschungs-/Testcode, nicht im aktiven Build
+src/core/         Shared Core (C++17, platform-independent)
+src/platform/ios/ iOS adapter: dylib entry, injection bootstrap, IL2CPP bridge, native UI
+src/platform/android/  Android adapter (not implemented yet)
+src/sim/          Simulation harness for testing without the real game
+mods/             Mod folder (metadata, see modloader.md)
+experimental/     Concluded research/test code, not part of the active build
 ```
 
-**Harte Regel:** `src/core/` weiss nie, wie er injiziert wird. Kein iOS/Android-Code,
-keine Injection-Details, keine Offsets im Core. Kommunikation nur ueber `GameContext`.
+**Hard rule:** `src/core/` never knows how it gets injected. No iOS/Android
+code, no injection details, no offsets in the core. Communication only
+through `GameContext`.
 
-## Core-Komponenten (`src/core/`)
+## Core components (`src/core/`)
 
-- **`Runtime`** — `start()` / `tick()` / `shutdown()`. Besitzt `GameContext` und
-  `ModLoader`. Einziger Einstiegspunkt fuer Platform-Adapter.
-- **`EventBus`** — einfaches Pub/Sub (`registerHandler`/`emit`), `Event`-Struct
-  mit Namen. Aktuell nicht mit Runtime/ModLoader verdrahtet, eigenstaendig nutzbar.
-- **`Mod`** — abstrakte Basisklasse: `OnLoad`/`OnUpdate`/`OnUnload` (Pflicht),
-  `name()`/`version()` (virtuell mit Default-Werten, ueberschreibbar).
-- **`GameContext`** — Platzhalter-State: `Player`, `World` (mit Grid-Massen
-  `gridWidth`/`gridHeight` fuer die Sim-Visualisierung), `Entity`-Liste.
-- **`ModLoader`** — haelt eine Liste von `Entry`s (Name, Version, enabled-Flag,
-  optional ein echtes `Mod`-Objekt). Zwei Wege, Eintraege zu bekommen:
-  - `registerMod(unique_ptr<Mod>)` — echter, code-tragender Mod (z.B. `MovementMod`
-    in der Sim).
-  - `scanDirectory(path)` — liest `manifest.json` aus Unterordnern, legt reine
-    Metadaten-Eintraege an (`mod == nullptr`, siehe `modloader.md`).
+- **`Runtime`** — `start()` / `tick()` / `shutdown()`. Owns `GameContext` and
+  `ModLoader`. The single entry point for platform adapters.
+- **`EventBus`** — simple pub/sub (`registerHandler`/`emit`), `Event` struct
+  with a name. Not currently wired to Runtime/ModLoader, usable standalone.
+- **`Mod`** — abstract base class: `OnLoad`/`OnUpdate`/`OnUnload` (required),
+  `name()`/`version()` (virtual with default values, overridable).
+- **`GameContext`** — placeholder state: `Player`, `World` (with grid
+  dimensions `gridWidth`/`gridHeight` for the sim visualization), `Entity` list.
+- **`ModLoader`** — holds a list of `Entry`s (name, version, enabled flag,
+  optionally a real `Mod` object). Two ways to get entries:
+  - `registerMod(unique_ptr<Mod>)` — a real, code-carrying mod (e.g.
+    `MovementMod` in the sim).
+  - `scanDirectory(path)` — reads `manifest.json` from subfolders, creates
+    pure metadata entries (`mod == nullptr`, see `modloader.md`).
 
-  `updateAll()` tickt nur Eintraege mit `enabled == true` UND einem echten
-  `Mod`-Objekt. `toggleMod(name)` / `setModEnabled(index, enabled)` steuern den
-  Status unabhaengig davon, ob ein echtes Mod-Objekt dahintersteht.
+  `updateAll()` only ticks entries with `enabled == true` AND a real `Mod`
+  object. `toggleMod(name)` / `setModEnabled(index, enabled)` control the
+  status regardless of whether a real mod object backs the entry.
 
-## Platform-Layer-Prinzip
+## Platform layer principle
 
-Adapter (`src/platform/ios/`) duerfen `Runtime`/`GameContext`/`ModLoader`
-importieren und aufrufen, aber Core importiert nie etwas aus `platform/`.
+Adapters (`src/platform/ios/`) may import and call `Runtime`/`GameContext`/
+`ModLoader`, but the core never imports anything from `platform/`.
 
-Innerhalb eines Adapters gilt eine weitere Trennung: die C++/Objective-C++-
-Bruecke (`Bootstrap.mm`, `Il2CppBridge.mm`) ist der einzige Ort, der sowohl
-Core-Typen (`tml::Runtime`, `tml::ModLoader`) als auch native UI-Typen kennt.
-Die UI-Komponenten selbst (`src/platform/ios/ui/`) sind reines Objective-C,
-kennen keine C++-Core-Typen — sie bekommen fertige, einfache Objective-C-
-Objekte (`TMLOverlayModRow`) und Blocks uebergeben. Das haelt die UI
-wiederverwendbar und die Kopplungsstellen minimal.
+Within an adapter there's a further separation: the C++/Objective-C++
+bridge (`Bootstrap.mm`, `Il2CppBridge.mm`) is the only place that knows both
+core types (`tml::Runtime`, `tml::ModLoader`) and native UI types. The UI
+components themselves (`src/platform/ios/ui/`) are pure Objective-C, they
+know no C++ core types — they're handed ready-made, simple Objective-C
+objects (`TMLOverlayModRow`) and blocks. That keeps the UI reusable and the
+coupling points minimal.
 
-`TMLOverlayManager` haelt zwei Panels und zeigt je nach Spielzustand
-(`TML_IsGameMenuActive()`) genau eins davon: `TMLOverlayPanel` im
-Hauptmenue (aendert `menuMode`, zeigt die Mod-Liste mit Toggles) und
-`TMLInGamePanel` waehrend einer laufenden Welt (aendert nichts am
-Spielzustand, aktuell ein Platzhalter fuer zukuenftige In-Game-Features —
-siehe `roadmap.md`).
+`TMLOverlayManager` holds two panels and shows exactly one of them depending
+on the game state (`TML_IsGameMenuActive()`): `TMLOverlayPanel` in the main
+menu (changes `menuMode`, shows the mod list with toggles) and
+`TMLInGamePanel` while a world is running (doesn't change game state,
+currently a placeholder for future in-game features — see `roadmap.md`).
 
-`experimental/` liegt bewusst ausserhalb von `src/` — Code dort ist
-abgeschlossene, gescheiterte oder nicht mehr aktiv verfolgte Forschung (siehe
-`technical-limitations.md`), nicht Teil des Adapters und nicht im Build
-verdrahtet.
+`experimental/` deliberately lives outside of `src/` — code there is
+concluded, failed, or no longer actively pursued research (see
+`technical-limitations.md`), not part of the adapter and not wired into the
+build.
 
-Details zu den einzelnen Adapter-Mechanismen: `ios-injection.md`,
-`il2cpp-bridge.md`. Zum Mod-Scan: `modloader.md`. Zu Grenzen: `technical-limitations.md`.
-Zum Ausblick: `roadmap.md`.
+Details on the individual adapter mechanisms: `ios-injection.md`,
+`il2cpp-bridge.md`. On the mod scan: `modloader.md`. On limitations:
+`technical-limitations.md`. On the outlook: `roadmap.md`.

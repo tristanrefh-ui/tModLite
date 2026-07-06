@@ -1,58 +1,58 @@
 # tModLite
 
-Mobile-first Modding Runtime für Terraria (iOS/Android). Kein tModLoader-Port.
-Eigene Runtime mit klar getrenntem Shared Core und Platform Adaptern.
+Mobile-first modding runtime for Terraria (iOS/Android). Not a tModLoader port.
+Own runtime with a clearly separated shared core and platform adapters.
 
 ## Architecture
 
 ```
 src/
-  core/         Shared Core (C++17, plattformunabhängig)
+  core/         Shared Core (C++17, platform-independent)
   platform/
-    ios/        iOS Adapter: dylib entry, injection bootstrap, hooking backend
-    android/    Android Adapter: .so injection, process attach, hooking backend
-  sim/          Simulation Harness zum Testen ohne echtes Game
-docs/           Detail-Notizen (Injection-Konzept, Hooking, Signing-Workflow etc.)
+    ios/        iOS adapter: dylib entry, injection bootstrap, hooking backend
+    android/    Android adapter: .so injection, process attach, hooking backend
+  sim/          Simulation harness for testing without the real game
+docs/           Detail notes (injection concept, hooking, signing workflow etc.)
 ```
 
 ### Core Components (src/core/)
 - `Runtime` — start(), tick(), shutdown()
 - `EventBus` — register(event), emit(event)
 - `Mod` — OnLoad(), OnUpdate(), OnUnload()
-- `ModLoader` — scannt mods folder, lädt Module, registriert Hooks
-- `GameContext` — Abstraktion für Player/World/Entities
+- `ModLoader` — scans mods folder, loads modules, registers hooks
+- `GameContext` — abstraction for Player/World/Entities
 
 ### Hard Rule
-**Core darf NIE wissen, wie er ins Spiel injiziert wird.**
-- Kein iOS/Android-spezifischer Code in `src/core/`
-- Keine Injection-Details, keine Offsets, kein Memory-Hacking im Core
-- Core kommuniziert nur über die `GameContext`-Abstraktion
+**Core must NEVER know how it gets injected into the game.**
+- No iOS/Android-specific code in `src/core/`
+- No injection details, no offsets, no memory hacking in the core
+- Core communicates only through the `GameContext` abstraction
 
 ## Tech Stack
-- C++17, CMake Build
-- iOS Cross-Compile: `ios.toolchain.cmake`, finales Signing/Deployment über Xcode-Tooling
-- Android Cross-Compile: NDK-Toolchain via CMake
-- Sideload-Signing (ESign/Feather/AltStore), kein Jailbreak nötig
+- C++17, CMake build
+- iOS cross-compile: `ios.toolchain.cmake`, final signing/deployment via Xcode tooling
+- Android cross-compile: NDK toolchain via CMake
+- Sideload signing (ESign/Feather/AltStore), no jailbreak needed
 
 ## Conventions
-- Naming: `PascalCase` für Klassen, `camelCase` für Methoden
-- Header/Source getrennt (`.hpp` / `.cpp`)
-- Jede neue Core-Klasse braucht einen Test im Simulation Harness, bevor Platform-Layer angefasst wird
+- Naming: `PascalCase` for classes, `camelCase` for methods
+- Header/source separated (`.hpp` / `.cpp`)
+- Every new core class needs a test in the simulation harness before the platform layer is touched
 
-## Dev Workflow (Reihenfolge einhalten)
-1. Core-Feature implementieren
-2. In der Simulation (`src/sim/`) testen — 60 FPS Update-Loop, Fake Player/World State
-3. Erst danach: Platform-Layer (iOS/Android) anfassen
+## Dev Workflow (keep the order)
+1. Implement the core feature
+2. Test it in the simulation (`src/sim/`) — 60 FPS update loop, fake player/world state
+3. Only then: touch the platform layer (iOS/Android)
 
 ## Current Sprint Focus
-<!-- Hier aktualisieren, was gerade dran ist -->
-- [ ] Runtime + EventBus Grundgerüst
-- [ ] Simulation Test Harness
-- [ ] Erste Test-Mod im Simulator
+<!-- Update here with what's currently being worked on -->
+- [ ] Runtime + EventBus scaffolding
+- [ ] Simulation test harness
+- [ ] First test mod in the simulator
 
 ## Known Issues / Open TODOs
-<!-- Hier laufend pflegen statt in den Chat-Verlauf zu schreiben -->
+<!-- Maintain this ongoing instead of writing it into the chat history -->
 
 ## Notes
-Größere Doku (z. B. Details zum iOS-Signing-Flow, Hooking-Strategien, Android-Loader-Konzept)
-gehört nach `docs/` in eigene Dateien, nicht hier rein — CLAUDE.md unter ~5k Tokens halten.
+Larger documentation (e.g. details on the iOS signing flow, hooking strategies, Android loader concept)
+belongs in its own files under `docs/`, not in here — keep CLAUDE.md under ~5k tokens.

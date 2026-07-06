@@ -1,29 +1,29 @@
 # Dobby (vendored, prebuilt)
 
-Quelle: offizielles Release-Asset `dobby-iphoneos-all.tar.gz` von
-https://github.com/jmpews/Dobby (Tag `latest`, veroeffentlicht 2024-03-14).
+Source: the official release asset `dobby-iphoneos-all.tar.gz` from
+https://github.com/jmpews/Dobby (tag `latest`, published 2024-03-14).
 
-Warum vorgebaut statt Source/FetchContent:
-- `git clone` ueber FetchContent(GIT_REPOSITORY) haengt sich in dieser
-  Entwicklungsumgebung beim git-smart-HTTP-Transport auf (gleiches Problem
-  wie bei nlohmann/json, siehe Root-`CMakeLists.txt`) - reine HTTPS-Downloads
-  von Release-Assets funktionieren dagegen zuverlaessig.
-- Dobbys eigenes CMake-Buildsystem ist auf eigenstaendige Cross-Compile-Aufrufe
-  zugeschnitten (eigene Toolchain-Flags), nicht auf sauberes `add_subdirectory`
-  in ein bestehendes iOS-Toolchain-Setup - das offizielle Release-Asset
-  enthaelt bereits fertige, von den Dobby-Maintainern selbst gebaute
-  `.a`-Dateien und macht dieses Risiko komplett irrelevant.
+Why prebuilt instead of source/FetchContent:
+- `git clone` via `FetchContent(GIT_REPOSITORY)` hangs in this development
+  environment on the git-smart-HTTP transport (same problem as with
+  nlohmann/json, see the root `CMakeLists.txt`) — plain HTTPS downloads of
+  release assets work reliably instead.
+- Dobby's own CMake build system is tailored to standalone cross-compile
+  invocations (its own toolchain flags), not to a clean `add_subdirectory`
+  into an existing iOS toolchain setup — the official release asset already
+  contains finished `.a` files built by the Dobby maintainers themselves,
+  making that risk completely irrelevant.
 
-## Inhalt
+## Contents
 
-- `include/dobby.h` - oeffentliche C-API (`DobbyHook`, `DobbyDestroy`,
+- `include/dobby.h` — the public C API (`DobbyHook`, `DobbyDestroy`,
   `DobbyGetVersion`, ...).
-- `lib/ios/libdobby.a` - universelle (fat) statische Lib, Architekturen
-  `arm64` + `arm64e` (per `lipo -info` verifiziert). Der Linker waehlt beim
-  Linken automatisch die zur Zielarchitektur passende Slice - unser
-  `build-ios.sh` baut aktuell fuer `arm64` (PLATFORM=OS64).
+- `lib/ios/libdobby.a` — a universal (fat) static lib, architectures
+  `arm64` + `arm64e` (verified via `lipo -info`). The linker automatically
+  picks the slice matching the target architecture — our `build-ios.sh`
+  currently builds for `arm64` (`PLATFORM=OS64`).
 
-## Aktualisieren
+## Updating
 
-Neueren Tarball von der Releases-Seite des Dobby-Repos laden, `dobby.h` und
-die passende `.a` aus `build/iphoneos/universal/` hier ersetzen.
+Download a newer tarball from the Dobby repo's releases page, replace
+`dobby.h` and the matching `.a` from `build/iphoneos/universal/` here.

@@ -1,53 +1,51 @@
 # experimental/
 
-Abgeschlossene Forschungs-/Testcode, der nicht mehr Teil des aktiven Builds
-ist, aber als Referenz aufgehoben wird — falls das Thema spaeter (z. B. mit
-einem anderen Hooking-Ansatz oder unter anderen Rahmenbedingungen) nochmal
-aufgegriffen wird. Nichts hier ist in `src/platform/ios/CMakeLists.txt`
-verdrahtet.
+Concluded research/test code that's no longer part of the active build, but
+kept as a reference — in case the topic gets picked up again later (e.g.
+with a different hooking approach or under different constraints). Nothing
+here is wired into `src/platform/ios/CMakeLists.txt`.
 
 ## HookTest.h / HookTest.mm
 
-Zwei Ansaetze, um bestehende Terraria-Methoden (`NPC.UpdateNPC(int)`) zur
-Laufzeit umzuleiten, beide auf echtem, nicht-jailbroken Geraet getestet:
+Two approaches to redirecting existing Terraria methods
+(`NPC.UpdateNPC(int)`) at runtime, both tested on a real, non-jailbroken
+device:
 
-1. **Dobby-Inline-Hook** (`TML_EnableHookTest`) — Codepatch auf die native
-   Funktionsadresse via [Dobby](https://github.com/jmpews/Dobby). Bereits der
-   Self-Test (Hook auf eine triviale Funktion in der **eigenen** dylib, nicht
-   in Terraria) ist auf dem Geraet abgestuerzt.
-2. **MethodInfo-Pointer-Swap** (`TML_EnableMethodPointerSwapTest`) — kein
-   Codepatch, sondern direktes Ueberschreiben von `MethodInfo::method`
-   (Offset 0, reiner Datenspeicher). Ebenfalls auf dem Geraet getestet, auch
-   ohne Erfolg.
+1. **Dobby inline hook** (`TML_EnableHookTest`) — a code patch on the native
+   function address via [Dobby](https://github.com/jmpews/Dobby). Even the
+   self-test (hooking a trivial function in our **own** dylib, not in
+   Terraria) crashed on the device.
+2. **MethodInfo pointer swap** (`TML_EnableMethodPointerSwapTest`) — no code
+   patch, just directly overwriting `MethodInfo::method` (offset 0, plain
+   data storage). Also tested on the device, also without success.
 
-Ergebnis und Einordnung: siehe [`docs/technical-limitations.md`](../docs/technical-limitations.md).
-Kurzfassung: beide Ansaetze scheitern, was auf eine grundsaetzliche
-Plattformgrenze hindeutet (iOS-Codesigning/W^X), nicht auf einen loesbaren
-Bug im Testcode.
+Result and interpretation: see
+[`docs/technical-limitations.md`](../docs/technical-limitations.md). Short
+version: both approaches fail, which points to a fundamental platform
+limit (iOS codesigning/W^X), not a fixable bug in the test code.
 
-### Re-Aktivieren, falls das Thema spaeter wieder aufgegriffen wird
+### Re-enabling, if this gets picked up again later
 
-1. `HookTest.h`/`HookTest.mm` zurueck nach `src/platform/ios/` verschieben.
-2. In `src/platform/ios/CMakeLists.txt`: `HookTest.mm` wieder zur
-   `add_library(tml_ios_bootstrap SHARED ...)`-Quellenliste hinzufuegen, plus
-   den Dobby-Imported-Target-Block (siehe Git-History dieser Datei,
-   Commit vor diesem Cleanup) und `dobby` wieder zu
-   `target_link_libraries(tml_ios_bootstrap PRIVATE ...)` hinzufuegen.
-3. Aufruf-Stellen (z. B. ein Diagnose-Eintrag im UI) wieder verdrahten — siehe
-   Git-History von `src/platform/ios/ui/TMLInGamePanel.mm` fuer das fruehere
-   Beispiel.
+1. Move `HookTest.h`/`HookTest.mm` back to `src/platform/ios/`.
+2. In `src/platform/ios/CMakeLists.txt`: add `HookTest.mm` back to the
+   `add_library(tml_ios_bootstrap SHARED ...)` source list, plus the Dobby
+   imported-target block (see this file's git history, the commit before
+   this cleanup) and add `dobby` back to
+   `target_link_libraries(tml_ios_bootstrap PRIVATE ...)`.
+3. Rewire the call sites (e.g. a diagnostic entry in the UI) — see the git
+   history of `src/platform/ios/ui/TMLInGamePanel.mm` for the earlier
+   example.
 
-Die vendorte Dobby-Lib selbst bleibt unabhaengig davon unter
-`third_party/dobby/` liegen (siehe deren eigene `README.md`).
+The vendored Dobby lib itself stays under `third_party/dobby/` regardless
+(see its own `README.md`).
 
 ## PlayerLoopTest.h / PlayerLoopTest.mm
 
-**Nicht** hierher verschoben, sondern weiterhin aktiv in
-`src/platform/ios/` — das ist keine abgeschlossene Sackgasse, sondern
-laufende Grundlagenrecherche fuer den naechsten Roadmap-Schritt
-(PlayerLoop-Integration statt NSTimer-Polling, siehe `docs/roadmap.md`).
-Wichtiger Unterschied zu den beiden Tests oben: hier geht es nicht um das
-Patchen/Umleiten bestehender Methoden, sondern um `PlayerLoop.SetPlayerLoop`-
-artige, von Unity selbst vorgesehene Erweiterungspunkte — falls das
-funktioniert, umgeht es die Codesigning-Grenze komplett, weil kein fremder
-Code gepatcht wird.
+**Not** moved here — still active in `src/platform/ios/`. This isn't a
+concluded dead end, but ongoing groundwork for the next roadmap step
+(PlayerLoop integration instead of NSTimer polling, see `docs/roadmap.md`).
+Important difference from the two tests above: this isn't about
+patching/redirecting existing methods, but about `PlayerLoop.SetPlayerLoop`
+-style extension points that Unity itself provides — if that works, it
+bypasses the codesigning limit entirely, because no foreign code gets
+patched.

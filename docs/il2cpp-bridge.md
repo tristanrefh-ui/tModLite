@@ -1,128 +1,128 @@
-# IL2CPP Bridge — Recherche, Irrwege, finaler Ansatz
+# IL2CPP Bridge — research, dead ends, final approach
 
-Terraria Mobile ist ein Unity/IL2CPP-Build. Diese Datei haelt fest, was
-tatsaechlich funktioniert hat, was nicht, und warum — damit der Denkweg beim
-naechsten Mal nicht wiederholt werden muss.
+Terraria Mobile is a Unity/IL2CPP build. This file records what actually
+worked, what didn't, and why — so the same thinking doesn't have to be
+repeated next time.
 
-## Werkzeuge
+## Tools
 
-- **IL2CppDumper** gegen `UnityFramework` (die im IPA eingebettete IL2CPP-
-  Runtime + kompiliertes Spiel) ausgefuehrt. Ergebnis: `dump.cs` (dekompilierte
-  Klassen-/Methoden-Signaturen als Pseudo-C#), `script.json` (Rohdaten),
-  `il2cpp.h` (Struct-Layouts der **Metadaten-Datei** — Achtung, siehe unten).
+- **IL2CppDumper** run against `UnityFramework` (the IL2CPP runtime +
+  compiled game embedded in the IPA). Result: `dump.cs` (decompiled
+  class/method signatures as pseudo-C#), `script.json` (raw data),
+  `il2cpp.h` (struct layouts of the **metadata file** — careful, see below).
 
-### Wichtige Verwechslungsgefahr
+### Important mix-up risk
 
-Es gibt in der IL2CPP-Welt **drei verschiedene, aehnlich benannte Header**:
+There are **three different, similarly named headers** in the IL2CPP world:
 
-1. **Metadata-Format-Header** (was IL2CppDumper als `il2cpp.h` ausgibt) —
-   beschreibt, wie `global-metadata.dat` auf der Platte aufgebaut ist
-   (`Il2CppTypeDefinition`, `Il2CppGlobalMetadataHeader`, ...). Nicht die
-   Laufzeit-API.
-2. **Runtime-Struct-Internals** (`Il2CppClass`, `Il2CppObject` mit echten
-   Feldern) — fuer direkten Offset-Zugriff, haben wir nicht gebraucht.
-3. **`il2cpp-api-functions.h`** — die tatsaechlich exportierten C-Funktionen
+1. **Metadata format header** (what IL2CppDumper outputs as `il2cpp.h`) —
+   describes how `global-metadata.dat` is laid out on disk
+   (`Il2CppTypeDefinition`, `Il2CppGlobalMetadataHeader`, ...). Not the
+   runtime API.
+2. **Runtime struct internals** (`Il2CppClass`, `Il2CppObject` with real
+   fields) — for direct offset access, we didn't need these.
+3. **`il2cpp-api-functions.h`** — the actually exported C functions
    (`il2cpp_domain_get`, `il2cpp_class_from_name`, `il2cpp_runtime_invoke`, ...).
-   **Das ist die einzige Datei, gegen die unser `Il2CppBridge.mm` verifiziert
-   wurde** (liegt als `reference/il2cpp-api-functions.h` im Repo). Erkennungs-
-   merkmal: Deklarationen ueber ein `DO_API(returnType, name, (params))`-Makro.
+   **This is the only file our `Il2CppBridge.mm` was verified against**
+   (checked into the repo as `reference/il2cpp-api-functions.h`). Tell: the
+   declarations go through a `DO_API(returnType, name, (params))` macro.
 
-Beim ersten Versuch wurde IL2CppDumpers `il2cpp.h` faelschlich fuer die
-API-Datei gehalten — enthielt aber keine der gesuchten Funktionen. Erst die
-echte `il2cpp-api-functions.h` (separat besorgt) hat die Signaturen bestaetigt.
+On the first attempt, IL2CppDumper's `il2cpp.h` was mistakenly assumed to be
+the API file — but it contained none of the functions we needed. Only the
+real `il2cpp-api-functions.h` (sourced separately) confirmed the signatures.
 
-## Der Denkweg (chronologisch)
+## The path (chronological)
 
-1. **Bridge-Grundlage:** `dlopen("UnityFramework", RTLD_NOLOAD)` (Fallback:
-   `_dyld_image_count()`/`_dyld_get_image_name()` nach dem echten Pfad
-   durchsuchen) + `dlsym` fuer die komplette benoetigte API. Alle Typen als
-   opake `typedef struct X X;`-Handles nachgebaut, keine Runtime-Header
-   eingebunden (die gehoeren dem Spiel, nicht uns).
+1. **Bridge foundation:** `dlopen("UnityFramework", RTLD_NOLOAD)` (fallback:
+   search `_dyld_image_count()`/`_dyld_get_image_name()` for the real path)
+   + `dlsym` for the whole API we needed. All types rebuilt as opaque
+   `typedef struct X X;` handles, no runtime headers included (those belong
+   to the game, not us).
 
-2. **Erster echter Test:** `Terraria.UI.UserInterface.ActiveInstance` (statisches
-   Feld) lesen, `SetState(UIState)` darauf aufrufen mit einer neu erzeugten
-   `UIAchievementsMenu`-Instanz (`il2cpp_object_new` + `.ctor`-Invoke). Bridge-
-   Aufruf war laut Log erfolgreich — **aber visuell aenderte sich nichts im Spiel.**
+2. **First real test:** read `Terraria.UI.UserInterface.ActiveInstance` (a
+   static field), call `SetState(UIState)` on it with a freshly created
+   `UIAchievementsMenu` instance (`il2cpp_object_new` + `.ctor` invoke). The
+   bridge call succeeded according to the log — **but nothing visually
+   changed in the game.**
 
-3. **Hypothese falsifiziert:** `ActiveInstance` ist offenbar nicht die
-   tatsaechlich gezeichnete Instanz. Fund in `dump.cs`: `Terraria.Main` hat
-   eigene statische Felder `MenuUI`/`InGameUI`, vermutlich die echten
-   Zeichenziele.
+3. **Hypothesis falsified:** `ActiveInstance` apparently isn't the instance
+   actually being drawn. Found in `dump.cs`: `Terraria.Main` has its own
+   static fields `MenuUI`/`InGameUI`, presumably the real draw targets.
 
-4. **Umgestellt auf `Main.MenuUI`** als Ziel fuer `SetState`. Wieder erfolgreich
-   laut Log, wieder keine sichtbare Aenderung.
+4. **Switched to `Main.MenuUI`** as the target for `SetState`. Succeeded
+   again according to the log, still no visible change.
 
-5. **`RefreshState()` ergaenzt** (in `dump.cs` gefunden: `_isStateDirty`-Feld +
-   `internal void RefreshState()` — Vermutung: ein Dirty-Flag-Mechanismus
-   entscheidet, ob `SetState` tatsaechlich einen Redraw ausloest). Wichtige
-   Randerkenntnis dabei: **`internal` ist zur Laufzeit kein Hindernis** —
-   IL2CPP kennt keine C#-Zugriffsmodifikatoren mehr, `class_get_method_from_name`
-   findet `internal`-Methoden genauso wie `public`.
+5. **Added `RefreshState()`** (found in `dump.cs`: an `_isStateDirty` field +
+   `internal void RefreshState()` — hypothesis: a dirty-flag mechanism
+   decides whether `SetState` actually triggers a redraw). Important side
+   finding: **`internal` is not an obstacle at runtime** — IL2CPP no longer
+   has C# access modifiers, `class_get_method_from_name` finds `internal`
+   methods just like `public` ones.
 
-6. **`Main.menuMode` als Signal-Ansatz.** Erst faelschlich als statisches Feld
-   behandelt, dann faelschlich als Instanzfeld (`Main.instance` gelesen, dann
-   `il2cpp_field_get_value`/`set_value` mit der Instanz). Am Ende die korrekte
-   Erkenntnis: `menuMode` ist eine **C#-Auto-Property**
-   (`public static int menuMode { get; set; }`), der Compiler generiert dafuer
-   `get_menuMode()`/`set_menuMode(int)` als ganz normale statische Methoden —
-   kein Feldzugriff noetig, kein `Main.instance` noetig.
+6. **`Main.menuMode` as a signal approach.** First mistakenly treated as a
+   static field, then mistakenly as an instance field (reading
+   `Main.instance`, then `il2cpp_field_get_value`/`set_value` with the
+   instance). Eventually the correct insight: `menuMode` is a **C# auto
+   property** (`public static int menuMode { get; set; }`), the compiler
+   generates `get_menuMode()`/`set_menuMode(int)` as perfectly ordinary
+   static methods for it — no field access needed, no `Main.instance` needed.
 
-7. **Finaler Ansatz:** Keine echten Terraria-Screens mehr kapern. `menuMode`
-   nur noch als **Signalzustand** genutzt (10 = ein interner, leerer
-   Terraria-Screen im Hintergrund, kein Terraria-UI sichtbar; 0 = zurueck zum
-   Titelbildschirm), und **darueber** ein komplett eigenes, natives UIKit-Panel
-   gelegt. `SetState`/`RefreshState`/`UIAchievementsMenu`-Code wurde entfernt
-   (nicht mehr gebraucht).
+7. **Final approach:** stop hijacking real Terraria screens entirely. Use
+   `menuMode` purely as a **signal state** (10 = an internal, empty Terraria
+   screen in the background, no Terraria UI visible; 0 = back to the title
+   screen), and lay a completely own, native UIKit panel **on top** of it.
+   The `SetState`/`RefreshState`/`UIAchievementsMenu` code was removed
+   (no longer needed).
 
-## Technische Stolperfallen (fuer's naechste Mal)
+## Technical pitfalls (for next time)
 
-- **Boxing bei Werttyp-Rueckgaben:** `il2cpp_runtime_invoke` gibt bei einem
-  `int`-Rueckgabewert (wie `get_menuMode()`) ein **geboxtes** `Il2CppObject*`
-  zurueck, nicht den rohen Wert. `il2cpp_object_unbox(obj)` liefert einen
-  `void*` auf die eigentlichen Daten — erst danach `*(int*)` casten.
-- **Instanz- vs. statische Feldfunktionen:** `il2cpp_field_get_value`/
-  `il2cpp_field_set_value` haben `Il2CppObject* obj` als **ersten** Parameter
-  (`(obj, field, value)`), waehrend `il2cpp_field_static_get_value` nur
-  `(field, value)` nimmt — leicht zu verwechseln.
-- **`il2cpp_domain_get_assemblies`** gibt `const Il2CppAssembly**` zurueck
-  (Array von Pointern, nicht ein einzelner Pointer) — die einzige Signatur, bei
-  der eine falsche Vermutung realistisch gewesen waere; wurde gegen die echte
-  Referenzdatei verifiziert und stimmte.
-- **Konstruktoren** heissen intern immer `.ctor` (CLR-Konvention).
-- **`runtime_invoke`-Parameter-Array:** Referenztyp-Argumente sind der
-  Objekt-Pointer direkt; Werttyp-Argumente sind ein Pointer **auf** den Wert
-  (`int v = 10; void* args[] = {&v};`).
-- **Logging:** `std::printf`/`fflush` reicht auf einem echten Geraet ohne
-  angehaengten Debugger oft nicht — Zeilen tauchten in Console.app nicht auf.
-  `NSLog` ist zuverlaessig sichtbar. Siehe auch `ios-injection.md`.
+- **Boxing on value-type returns:** `il2cpp_runtime_invoke` returns a
+  **boxed** `Il2CppObject*` for an `int` return value (like
+  `get_menuMode()`), not the raw value. `il2cpp_object_unbox(obj)` gives a
+  `void*` to the actual data — only then cast to `*(int*)`.
+- **Instance vs. static field functions:** `il2cpp_field_get_value`/
+  `il2cpp_field_set_value` take `Il2CppObject* obj` as the **first**
+  parameter (`(obj, field, value)`), while `il2cpp_field_static_get_value`
+  only takes `(field, value)` — easy to mix up.
+- **`il2cpp_domain_get_assemblies`** returns `const Il2CppAssembly**` (an
+  array of pointers, not a single pointer) — the one signature where a wrong
+  guess would have been plausible; verified against the real reference file
+  and it checked out.
+- **Constructors** are always internally called `.ctor` (CLR convention).
+- **`runtime_invoke` parameter array:** reference-type arguments are the
+  object pointer directly; value-type arguments are a pointer **to** the
+  value (`int v = 10; void* args[] = {&v};`).
+- **Logging:** `std::printf`/`fflush` often isn't enough on a real device
+  without an attached debugger — lines didn't show up in Console.app.
+  `NSLog` is reliably visible. See also `ios-injection.md`.
 
-## Aktuelle finale API-Nutzung
+## Current final API usage
 
-- `Terraria.Main.get_menuMode()` / `set_menuMode(int)`, einmalig pro Prozess
-  aufgeloest und gecacht (`Il2CppBridge.mm`, `TML_SetMenuMode(int)`).
-- `Terraria.Main.get_gameMenu()` (nur Getter, analog zur menuMode-Property,
-  siehe unten) — `TML_IsGameMenuActive()`.
-- `Terraria.Player`: `myPlayer`-Property, `Main.player`-Array-Feld,
-  `statLife`/`statLifeMax`-Instanzfelder — God-Mode-Poll (`TML_SetGodMode`).
+- `Terraria.Main.get_menuMode()` / `set_menuMode(int)`, resolved and cached
+  once per process (`Il2CppBridge.mm`, `TML_SetMenuMode(int)`).
+- `Terraria.Main.get_gameMenu()` (getter only, analogous to the menuMode
+  property, see below) — `TML_IsGameMenuActive()`.
+- `Terraria.Player`: the `myPlayer` property, the `Main.player` array field,
+  the `statLife`/`statLifeMax` instance fields — the God Mode poll
+  (`TML_SetGodMode`).
 
-## gameMenu: Hauptmenue vs. laufende Welt unterscheiden
+## gameMenu: telling the main menu apart from a running world
 
-Gleiches Muster wie bei `menuMode`: `gameMenu` ist ebenfalls eine
-C#-Auto-Property (`public static bool gameMenu { get; set; }`), wir nutzen
-nur den generierten Getter `get_gameMenu()`. Zweck: `TMLOverlayManager`
-muss beim Oeffnen des Overlays wissen, ob gerade das Hauptmenue oder eine
-laufende Welt aktiv ist, um das passende Panel zu zeigen (`TMLOverlayPanel`
-vs. `TMLInGamePanel` — siehe `architecture.md`). Kein Setter noetig, da wir
-den Zustand nur erkennen, nicht selbst umschalten wollen. Fallback bei nicht
-einsatzbereiter Bridge: `true` (im Zweifel wie Hauptmenue behandeln, der
-bestehende Settings-Panel-Pfad ist konservativer als das neuere,
-experimentellere In-Game-Panel).
+Same pattern as `menuMode`: `gameMenu` is also a C# auto property
+(`public static bool gameMenu { get; set; }`), we only use the generated
+getter `get_gameMenu()`. Purpose: `TMLOverlayManager` needs to know, when
+opening the overlay, whether the main menu or a running world is currently
+active, to show the right panel (`TMLOverlayPanel` vs. `TMLInGamePanel` —
+see `architecture.md`). No setter needed, since we only want to detect the
+state, not switch it ourselves. Fallback when the bridge isn't ready: `true`
+(when in doubt, treat it like the main menu — the existing settings-panel
+path is more conservative than the newer, more experimental in-game panel).
 
-## Grenze: nur Aufrufe, kein Hooking
+## Limitation: calls only, no hooking
 
-Alles oben ist ein **Aufruf** bestehender Methoden — funktioniert
-zuverlaessig. Ein **Hook** (bestehendes Methodenverhalten aendern/umleiten)
-ist ein komplett anderes Problem und wurde separat untersucht, mit
-negativem Ergebnis auf echtem Geraet — siehe `technical-limitations.md` und
-`experimental/HookTest.mm`. Diese Bridge-Datei bleibt bewusst frei von
-Hooking-Code.
+Everything above is a **call** to an existing method — works reliably. A
+**hook** (changing/redirecting existing method behavior) is a completely
+different problem and was investigated separately, with a negative result
+on a real device — see `technical-limitations.md` and
+`experimental/HookTest.mm`. This bridge file deliberately stays free of
+hooking code.

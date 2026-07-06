@@ -1,83 +1,82 @@
 # TModLite
 
-Native iOS-Modding-Runtime fuer **Terraria Mobile** — **kein Jailbreak
-noetig**. Kein tModLoader-Port: eigene, schlanke Runtime mit klar getrenntem
-plattformunabhaengigem Core und einem iOS-Adapter, der per Sideload-Signing
-(Feather o.ae.) in eine eigene, legal gekaufte Terraria-Kopie injiziert wird.
+Native iOS modding runtime for **Terraria Mobile** — **no jailbreak
+required**. Not a tModLoader port: a lean, purpose-built runtime with a
+clearly separated platform-independent core and an iOS adapter, injected
+into your own, legally purchased copy of Terraria via sideload signing
+(Feather or similar).
 
-Details zur Architektur: [CLAUDE.md](CLAUDE.md), [docs/architecture.md](docs/architecture.md).
+Architecture details: [CLAUDE.md](CLAUDE.md), [docs/architecture.md](docs/architecture.md).
 
-## Was funktioniert (verifiziert auf echtem, nicht-jailbroken Geraet)
+## What works (verified on a real, non-jailbroken device)
 
-- ✅ **Injection ohne Jailbreak** — via Feather/`insert_dylib`, eigene dylib
-  laedt sich beim Start der App automatisch mit ([docs/ios-injection.md](docs/ios-injection.md))
-- ✅ **IL2CPP-Bridge** — Terraria-Klassen/-Methoden/-Felder zur Laufzeit
-  auflösen und aufrufen (`dlopen`/`dlsym` auf `UnityFramework`, kein
-  Reverse-Engineering-Framework noetig) ([docs/il2cpp-bridge.md](docs/il2cpp-bridge.md))
-- ✅ **God Mode** — `Player.statLife` in Echtzeit ueber die IL2CPP-Bridge gepollt
-- ✅ **Natives In-Game-Overlay** — eigener Touch-Passthrough-Trigger, ein
-  Hauptmenue-Settings-Panel (Mod-Liste mit Toggles) und ein separates
-  In-Game-Panel, je nach erkanntem Spielzustand
-- ✅ **ModLoader mit Ordner-Scan** — `manifest.json` pro Mod-Ordner wird
-  erkannt, Mods koennen aktiviert/deaktiviert werden ([docs/modloader.md](docs/modloader.md))
+- ✅ **Injection without jailbreak** — via Feather/`insert_dylib`, the dylib
+  loads itself automatically when the app starts ([docs/ios-injection.md](docs/ios-injection.md))
+- ✅ **IL2CPP bridge** — resolve and call Terraria classes/methods/fields at
+  runtime (`dlopen`/`dlsym` against `UnityFramework`, no reverse-engineering
+  framework needed) ([docs/il2cpp-bridge.md](docs/il2cpp-bridge.md))
+- ✅ **God Mode** — `Player.statLife` polled in real time via the IL2CPP bridge
+- ✅ **Native in-game overlay** — a touch-passthrough trigger, a main-menu
+  settings panel (mod list with toggles), and a separate in-game panel
+  depending on the detected game state
+- ✅ **ModLoader with folder scan** — a `manifest.json` per mod folder is
+  detected, mods can be enabled/disabled ([docs/modloader.md](docs/modloader.md))
 
-## Was geplant, aber (noch) nicht gebaut ist
+## What's planned but not built (yet)
 
-- ⚠️ **Echtes Ausfuehren von Mod-Code** — der ModLoader scannt aktuell nur
-  Metadaten (`manifest.json`); Mods bringen noch keinen echten Code mit
+- ⚠️ **Actually running mod code** — the ModLoader currently only scans
+  metadata (`manifest.json`); mods don't carry real code yet
   ([docs/modloader.md](docs/modloader.md))
-- ⚠️ **Custom-Inhalte** (Bosse, Waffen, Begleiter, Rezepte, Invasions-Trigger
-  o.ae.) — durchdacht in [docs/calamity-architecture.md](docs/calamity-architecture.md),
-  aber **auf Eis**: das zugrunde liegende Konzept braucht Behavior-Hooking
-  bestehender Terraria-Methoden, und das funktioniert ohne Jailbreak nicht
-  (siehe naechster Punkt)
-- ⚠️ **Android-Adapter** — bisher nur iOS implementiert
-- ⚠️ PlayerLoop-Integration statt Poll-Timer, Custom-Texturen, Mod-Zustand
-  persistieren — siehe [docs/roadmap.md](docs/roadmap.md)
+- ⚠️ **Custom content** (bosses, weapons, companions, recipes, invasion
+  triggers, etc.) — thought through in [docs/calamity-architecture.md](docs/calamity-architecture.md),
+  but **on hold**: the underlying concept needs behavior-hooking of existing
+  Terraria methods, and that doesn't work without a jailbreak (see next point)
+- ⚠️ **Android adapter** — iOS only so far
+- ⚠️ PlayerLoop integration instead of a poll timer, custom textures,
+  persisting mod state — see [docs/roadmap.md](docs/roadmap.md)
 
-## ⚠️ Bekannte Grenze
+## ⚠️ Known limitation
 
-**Kein Verhalten-Hooking bestehender Methoden ohne Jailbreak.** iOS erzwingt
-Codesigning/W^X — ausfuehrbarer Speicher fremder, codesignierter Prozesse
-kann zur Laufzeit nicht umgeschrieben werden. Zwei Ansaetze wurden auf einem
-echten Geraet getestet (Dobby-Inline-Hook, MethodInfo-Pointer-Swap), beide
-sind gescheitert. TModLite kann bestehende Methoden **aufrufen** (God Mode,
-menuMode-Steuerung), aber nicht ihr Verhalten **aendern**. Details, getestete
-Ansaetze und was das fuer Mod-Ideen bedeutet:
-[docs/technical-limitations.md](docs/technical-limitations.md).
+**No behavior-hooking of existing methods without a jailbreak.** iOS
+enforces codesigning/W^X — executable memory of a foreign, codesigned
+process can't be rewritten at runtime. Two approaches were tested on a real
+device (Dobby inline hook, MethodInfo pointer swap), both failed. TModLite
+can **call** existing methods (God Mode, menuMode control), but not
+**change** their behavior. Details, tested approaches, and what this means
+for mod ideas: [docs/technical-limitations.md](docs/technical-limitations.md).
 
 ## Screenshots
 
-*(Platzhalter — fuege hier eigene Screenshots vom In-Game-Overlay und dem
-Settings-Panel ein, sobald verfuegbar.)*
+*(Placeholder — add your own screenshots of the in-game overlay and the
+settings panel here once available.)*
 
-## Voraussetzungen
+## Prerequisites
 
-- Eigene, legal gekaufte Kopie von Terraria (iOS)
-- Eigenes iOS-Geraet — **kein Jailbreak noetig**
-- Ein Sideload-Signing-Tool (z.B. [Feather](https://github.com/khcrysalis/Feather),
-  ESign, AltStore) mit eigenem Zertifikat/Profil
-- Volles Xcode (nicht nur Command Line Tools) mit iOS-SDK, `xcode-select -p`
-  muss auf `Xcode.app/Contents/Developer` zeigen
+- Your own, legally purchased copy of Terraria (iOS)
+- Your own iOS device — **no jailbreak required**
+- A sideload signing tool (e.g. [Feather](https://github.com/khcrysalis/Feather),
+  ESign, AltStore) with your own certificate/profile
+- Full Xcode (not just Command Line Tools) with the iOS SDK, `xcode-select -p`
+  must point at `Xcode.app/Contents/Developer`
 - CMake >= 3.20
 
 ## Setup: Build → Inject → Test
 
 ```bash
-# 1. dylib bauen (arm64, echtes Device)
+# 1. Build the dylib (arm64, real device)
 ./scripts/build-ios.sh
 # -> build-ios/src/platform/ios/libtml_ios_bootstrap.dylib
 
-# 2. In die eigene Terraria-IPA einbetten (z.B. via insert_dylib oder
-#    Feathers eingebaute Tweak-Injection) und mit Feather resignen.
+# 2. Embed it into your own Terraria IPA (e.g. via insert_dylib or
+#    Feather's built-in tweak injection) and resign with Feather.
 
-# 3. Installieren, App starten, Trigger-Button antippen.
+# 3. Install, launch the app, tap the trigger button.
 ```
 
-Ausfuehrliche Schritt-fuer-Schritt-Anleitung inkl. Logging-Tipps:
+Detailed step-by-step instructions including logging tips:
 [docs/ios-injection.md](docs/ios-injection.md).
 
-### Desktop-Build (Entwicklung/Tests, ohne echtes Spiel)
+### Desktop build (development/testing, no real game needed)
 
 ```bash
 cmake -S . -B build
@@ -85,31 +84,30 @@ cmake --build build
 ./build/src/sim/tml_sim
 ```
 
-Baut `tml_core` (Core-Lib) und `tml_sim` (Simulation Harness mit
-Test-Mods, Live-ASCII-Visualisierung). Sinnvoll, um Core-Aenderungen zu
-testen, ohne ein Geraet zu brauchen — siehe Dev-Workflow in [CLAUDE.md](CLAUDE.md).
+Builds `tml_core` (core lib) and `tml_sim` (simulation harness with test
+mods, live ASCII visualization). Useful for testing core changes without
+needing a device — see the dev workflow in [CLAUDE.md](CLAUDE.md).
 
-### Android-Build (nur `tml_core`, Adapter noch nicht implementiert)
+### Android build (`tml_core` only, adapter not implemented yet)
 
 ```bash
-export ANDROID_NDK_HOME=/pfad/zum/ndk
+export ANDROID_NDK_HOME=/path/to/ndk
 ./scripts/build-android.sh
 ```
 
-## Weitere Docs
+## More docs
 
-- [docs/architecture.md](docs/architecture.md) — Core/Platform-Trennung
-- [docs/ios-injection.md](docs/ios-injection.md) — kompletter Injection-Workflow
-- [docs/il2cpp-bridge.md](docs/il2cpp-bridge.md) — IL2CPP-Recherche, was funktioniert und warum
-- [docs/technical-limitations.md](docs/technical-limitations.md) — was nicht geht und warum
-- [docs/modloader.md](docs/modloader.md) — Mod-Ordner-Scan
-- [docs/roadmap.md](docs/roadmap.md) — naechste Schritte
-- [CONTRIBUTING.md](CONTRIBUTING.md) — Build/Test/PR-Erwartungen
+- [docs/architecture.md](docs/architecture.md) — core/platform separation
+- [docs/ios-injection.md](docs/ios-injection.md) — the complete injection workflow
+- [docs/il2cpp-bridge.md](docs/il2cpp-bridge.md) — IL2CPP research, what works and why
+- [docs/technical-limitations.md](docs/technical-limitations.md) — what doesn't work and why
+- [docs/modloader.md](docs/modloader.md) — mod folder scan
+- [docs/roadmap.md](docs/roadmap.md) — next steps
+- [CONTRIBUTING.md](CONTRIBUTING.md) — build/test/PR expectations
 
 ## Disclaimer
 
-Nur fuer den eigenen, persoenlichen Gebrauch mit einer legal erworbenen
-Kopie von Terraria. Kein Redistribute von Terraria-eigenen Dateien/Assets.
-Dieses Projekt steht in keinem Zusammenhang mit Re-Logic oder 505 Games und
-wird von keinem der beiden unterstuetzt oder autorisiert. Nutzung auf eigene
-Verantwortung.
+For personal use only, with a legally acquired copy of Terraria. No
+redistribution of Terraria's own files/assets. This project has no
+affiliation with Re-Logic or 505 Games and is not endorsed or authorized by
+either. Use at your own risk.

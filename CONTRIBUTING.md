@@ -1,59 +1,58 @@
 # Contributing
 
-Kurzfassung fuer PRs. Architektur-Details: [CLAUDE.md](CLAUDE.md),
+Short version for PRs. Architecture details: [CLAUDE.md](CLAUDE.md),
 [docs/architecture.md](docs/architecture.md).
 
-## Bauen
+## Building
 
 ```bash
-# Desktop (Core + Simulation, kein Geraet noetig)
+# Desktop (core + simulation, no device needed)
 cmake -S . -B build
 cmake --build build
 ./build/src/sim/tml_sim
 
-# iOS (Core + Bootstrap-dylib, braucht volles Xcode)
+# iOS (core + bootstrap dylib, needs full Xcode)
 ./scripts/build-ios.sh
 ```
 
-## Testen
+## Testing
 
-Kein automatisiertes Test-Framework — der `src/sim/`-Simulation-Harness
-(60 FPS Update-Loop, Fake Player/World-State) ist der Test-Weg fuer
-Core-Aenderungen. Reihenfolge, siehe [CLAUDE.md](CLAUDE.md#dev-workflow-reihenfolge-einhalten):
+No automated test framework — the `src/sim/` simulation harness (60 FPS
+update loop, fake player/world state) is the test path for core changes.
+Order, see [CLAUDE.md](CLAUDE.md#dev-workflow-keep-the-order):
 
-1. Core-Feature in `src/core/` implementieren
-2. In der Simulation (`src/sim/`) testen, bevor der Platform-Layer angefasst wird
-3. Erst danach: iOS/Android-Adapter
+1. Implement the core feature in `src/core/`
+2. Test it in the simulation (`src/sim/`) before touching the platform layer
+3. Only then: the iOS/Android adapter
 
-Fuer iOS-Aenderungen gibt es keinen Simulator-Ersatz fuer den echten
-IL2CPP-Zugriff — Testzyklus (Build → Inject via Feather → Console.app-Logs)
-steht in [docs/ios-injection.md](docs/ios-injection.md).
+For iOS changes there's no simulator substitute for real IL2CPP access —
+the test cycle (build → inject via Feather → Console.app logs) is in
+[docs/ios-injection.md](docs/ios-injection.md).
 
-## Harte Regel: Core/Platform-Trennung
+## Hard rule: core/platform separation
 
-`src/core/` darf **nie** wissen, wie er ins Spiel injiziert wird — kein
-iOS/Android-spezifischer Code, keine Injection-Details, keine Offsets, kein
-Memory-Hacking im Core. Kommunikation nur ueber `GameContext`. PRs, die diese
-Grenze verwischen, werden nicht angenommen.
+`src/core/` must **never** know how it gets injected into the game — no
+iOS/Android-specific code, no injection details, no offsets, no memory
+hacking in the core. Communication only through `GameContext`. PRs that
+blur this boundary won't be accepted.
 
-## Ehrlichkeit statt Marketing
+## Honesty over marketing
 
-Dieses Projekt dokumentiert bewusst, was **nicht** geht
-([docs/technical-limitations.md](docs/technical-limitations.md)), nicht nur
-was geht. Bitte bei PRs:
+This project deliberately documents what does **not** work
+([docs/technical-limitations.md](docs/technical-limitations.md)), not just
+what does. Please, in PRs:
 
-- Keine Feature-Beschreibungen, die suggerieren, dass Verhalten bestehender
-  Terraria-Methoden gehookt wird, wenn es tatsaechlich nur ein Aufruf/Poll ist.
-- Neue Erkenntnisse zu Grenzen (z.B. ein weiterer gescheiterter
-  Hooking-Versuch) gehoeren nach `docs/technical-limitations.md`, nicht
-  stillschweigend geloescht.
-- Experimenteller/abgeschlossener Testcode gehoert nach `experimental/` mit
-  kurzer Begruendung im dortigen `README.md`, nicht geloescht und nicht in
-  `src/` liegen gelassen.
+- Don't describe features in a way that implies existing Terraria method
+  behavior is being hooked when it's actually just a call/poll.
+- New findings about limitations (e.g. another failed hooking attempt)
+  belong in `docs/technical-limitations.md`, not quietly dropped.
+- Experimental/concluded test code belongs in `experimental/` with a short
+  rationale in the README there, not deleted and not left lying around in
+  `src/`.
 
-## Sonstiges
+## Misc
 
-- Naming: `PascalCase` fuer Klassen, `camelCase` fuer Methoden
-- Header/Source getrennt (`.hpp`/`.cpp` bzw. `.h`/`.mm`)
-- Groessere Konzept-/Recherche-Dokumente gehoeren nach `docs/`, nicht in
-  `CLAUDE.md` (das soll unter ~5k Tokens bleiben)
+- Naming: `PascalCase` for classes, `camelCase` for methods
+- Header/source separated (`.hpp`/`.cpp` or `.h`/`.mm`)
+- Larger concept/research documents belong in `docs/`, not in `CLAUDE.md`
+  (which should stay under ~5k tokens)

@@ -1,105 +1,103 @@
 # Technical Limitations
 
-Ehrliche Bestandsaufnahme, was auf iOS **ohne Jailbreak** technisch nicht
-(oder noch nicht) geht, und warum. Zielgruppe: jeder, der ueberlegt, ob
-TModLite fuer sein Mod-Vorhaben die richtige Grundlage ist, bevor er Zeit
-investiert.
+An honest inventory of what technically does not (or does not yet) work on
+iOS **without a jailbreak**, and why. Audience: anyone considering whether
+TModLite is the right foundation for their modding idea, before investing
+time.
 
-## Kein Behavior-Hooking bestehender Terraria-Methoden
+## No behavior-hooking of existing Terraria methods
 
-Das groesste Limit. TModLite kann bestehende IL2CPP-Methoden **aufrufen**
-(siehe `il2cpp-bridge.md` — `menuMode`, `gameMenu`, `Player.statLife`), aber
-nicht deren **Verhalten veraendern**. Fuer echte Gameplay-Mods (QuickHeal soll
-tatsaechlich beim Schaden eingreifen, InfiniteAmmo soll den Ammo-Verbrauch
-unterbinden) braucht es Inline-Hooking bestehender Methoden — das haben wir
-auf einem echten, nicht-jailbroken Geraet getestet, und beide getesteten
-Ansaetze sind gescheitert.
+The biggest limitation. TModLite can **call** existing IL2CPP methods (see
+`il2cpp-bridge.md` — `menuMode`, `gameMenu`, `Player.statLife`), but not
+**change their behavior**. Real gameplay mods (QuickHeal actually
+intervening on damage, InfiniteAmmo actually preventing ammo consumption)
+need inline hooking of existing methods — we tested that on a real,
+non-jailbroken device, and both tested approaches failed.
 
-### Warum: Codesigning / W^X
+### Why: codesigning / W^X
 
-iOS erzwingt fuer Apps ohne Jailbreak, dass Speicherseiten nicht gleichzeitig
-beschreibbar und ausfuehrbar sein duerfen (W^X, "Write XOR Execute") und dass
-ausfuehrbarer Code signiert sein muss. Terrarias kompilierter IL2CPP-Code
-(in `UnityFramework`) liegt auf codesignierten Seiten, die zur Laufzeit nicht
-umgeschrieben werden koennen — unabhaengig davon, mit welcher Bibliothek man
-das versucht.
+iOS enforces, for apps without a jailbreak, that memory pages can't be both
+writable and executable at the same time (W^X, "Write XOR Execute") and
+that executable code must be signed. Terraria's compiled IL2CPP code (in
+`UnityFramework`) sits on codesigned pages that can't be rewritten at
+runtime — regardless of which library is used to try.
 
-### Getestete Ansaetze (Referenz, Code in `experimental/HookTest.mm`)
+### Tested approaches (reference, code in `experimental/HookTest.mm`)
 
-| # | Ansatz | Idee | Ergebnis auf echtem Geraet |
+| # | Approach | Idea | Result on a real device |
 |---|--------|------|------------------------------|
-| 1 | **Dobby Inline-Hook** | ARM64-Trampolin-Hook via [Dobby](https://github.com/jmpews/Dobby), patcht die native Codeadresse von `NPC.UpdateNPC(int)` direkt | Bereits der **Self-Test** (Hook auf eine triviale Funktion in der eigenen, selbst-signierten dylib — nicht in Terraria) ist abgestuerzt. Das deutet auf eine grundsaetzliche Plattformgrenze hin, nicht nur ein Terraria-spezifisches Problem mit fremden codesignierten Seiten. |
-| 2 | **MethodInfo-Pointer-Swap** | Kein Codepatch: `MethodInfo::method` (Offset 0 im Struct, reiner Datenspeicher, keine Codeseite) direkt auf die Adresse einer eigenen Funktion umbiegen — umgeht Dobby und damit potenziell auch W^X, weil kein ausfuehrbarer Speicher beschrieben wird | Ebenfalls auf dem Geraet getestet, ebenfalls ohne Erfolg — keine funktionierende Umleitung des echten Spielaufrufpfads beobachtet. |
-| 3 | **Vtable-Slot-Swap** *(nicht implementiert)* | Falls `NPC.UpdateNPC` eine virtuelle Methode ist (wird zur Laufzeit ueber `il2cpp_method_get_flags`/`METHOD_ATTRIBUTE_VIRTUAL` bestimmt, siehe `experimental/HookTest.mm`), koennte man statt `MethodInfo::method` den passenden Slot in `Il2CppClass::vtable` (`reference/il2cpp.h` Zeile 275) ueberschreiben | Nicht getestet — reine Idee, kein Code dafuer existiert. Da Ansatz 2 (strukturell sehr aehnlich: Datenspeicher-Write, kein Codepatch) schon ohne Erfolg war, ist die Erwartung nicht hoch, aber unwiderlegt. |
+| 1 | **Dobby inline hook** | ARM64 trampoline hook via [Dobby](https://github.com/jmpews/Dobby), patches the native code address of `NPC.UpdateNPC(int)` directly | Even the **self-test** (hooking a trivial function in our own, self-signed dylib — not in Terraria) crashed. That points to a fundamental platform limit, not just a Terraria-specific problem with foreign codesigned pages. |
+| 2 | **MethodInfo pointer swap** | No code patch: redirect `MethodInfo::method` (offset 0 in the struct, plain data storage, not a code page) directly to the address of our own function — bypasses Dobby and thus potentially W^X too, since no executable memory is written | Also tested on the device, also without success — no working redirection of the real game call path was observed. |
+| 3 | **Vtable slot swap** *(not implemented)* | If `NPC.UpdateNPC` is a virtual method (determined at runtime via `il2cpp_method_get_flags`/`METHOD_ATTRIBUTE_VIRTUAL`, see `experimental/HookTest.mm`), the matching slot in `Il2CppClass::vtable` (`reference/il2cpp.h` line 275) could be overwritten instead of `MethodInfo::method` | Not tested — a pure idea, no code exists for it. Since approach 2 (structurally very similar: a data-storage write, no code patch) already failed, expectations aren't high, but it's unrefuted. |
 
-**Fazit:** Mit den bisher getesteten Mitteln ist Behavior-Hooking bestehender
-Terraria-Methoden auf einem nicht-jailbroken Geraet nicht erreichbar. Das ist
-kein endgueltiger Beweis (Vtable-Ansatz offen, andere Hooking-Bibliotheken
-denkbar), aber genug Signal, um es nicht als verlaessliche Grundlage fuer
-Features einzuplanen. Betroffen: das komplette "Puppenspieler"-Konzept aus
-`calamity-architecture.md` (Custom-Bosse, -Waffen, -Begleiter über gekaperte
-Vanilla-Typen) — dieses Dokument ist deshalb aktuell als Konzept auf Eis,
-nicht als aktiver Plan zu verstehen.
+**Conclusion:** with the means tested so far, behavior-hooking existing
+Terraria methods is not achievable on a non-jailbroken device. This isn't
+final proof (the vtable approach is open, other hooking libraries are
+conceivable), but enough signal to not plan it as a reliable foundation for
+features. Affected: the entire "puppeteer" concept from
+`calamity-architecture.md` (custom bosses, weapons, companions via hijacked
+vanilla types) — that document should currently be understood as a concept
+on hold, not an active plan.
 
-## Was das nicht betrifft: reine API-Aufrufe
+## What this doesn't affect: plain API calls
 
-Wichtig zur Abgrenzung — folgendes funktioniert weiterhin uneingeschraenkt,
-weil es **keine bestehende Methode veraendert**, nur **aufruft**:
+Important distinction — the following keeps working without restriction,
+because it **doesn't change any existing method**, only **calls** it:
 
-- Statische/Instanz-Properties lesen/schreiben (`menuMode`, `gameMenu`,
+- Reading/writing static/instance properties (`menuMode`, `gameMenu`,
   `Player.statLife`/`statLifeMax`)
-- Neue Instanzen bestehender Klassen erzeugen (`il2cpp_object_new` + `.ctor`)
-- Bestehende Methoden ganz normal aufrufen (`il2cpp_runtime_invoke`)
-- `Recipe`/`AddRecipe()` — neue Rezepte anlegen, weil das dem vorgesehenen
-  Erweiterungsmuster von Terraria selbst entspricht, kein Hook noetig
+- Creating new instances of existing classes (`il2cpp_object_new` +
+  `.ctor`)
+- Calling existing methods normally (`il2cpp_runtime_invoke`)
+- `Recipe`/`AddRecipe()` — creating new recipes, since that matches
+  Terraria's own intended extension pattern, no hook needed
 
-God Mode (`Il2CppBridge.mm`, Poll-Timer auf `Player.statLife`) ist ein
-Beispiel dafuer, wie weit man **ohne** Hooking kommt: kein Hook auf
-`Player.Update()`, sondern ein simpler nativer Timer, der den Wert periodisch
-zuruecksetzt.
+God Mode (`Il2CppBridge.mm`, a poll timer on `Player.statLife`) is an
+example of how far you can get **without** hooking: no hook on
+`Player.Update()`, just a simple native timer that resets the value
+periodically.
 
-## Nicht-virtuelle Methoden
+## Non-virtual methods
 
-Selbst falls ein Hooking-Ansatz irgendwann funktioniert: nicht-virtuelle
-Methoden lassen sich prinzipbedingt nicht ueber Vtable-Manipulation umleiten
-(es gibt keinen Vtable-Slot) — dafuer bliebe nur ein echter Codepatch auf die
-Aufrufstelle selbst (Ansatz 1) oder auf `MethodInfo::method` (Ansatz 2),
-beide oben bereits erfolglos getestet. Ob `NPC.UpdateNPC(int)` virtuell ist,
-ermittelt `experimental/HookTest.mm` zur Laufzeit (`TML_IsUpdateNpcVirtual`),
-war zum Zeitpunkt dieses Dokuments aber kein entscheidender Faktor mehr, weil
-schon der Datenspeicher-Ansatz (2) nicht griff.
+Even if a hooking approach ever works: non-virtual methods can't be
+redirected via vtable manipulation in principle (there's no vtable slot) —
+the only options left would be a real code patch on the call site itself
+(approach 1) or on `MethodInfo::method` (approach 2), both already tested
+above without success. Whether `NPC.UpdateNPC(int)` is virtual is
+determined at runtime by `experimental/HookTest.mm`
+(`TML_IsUpdateNpcVirtual`), but wasn't a decisive factor by the time of
+this document, since the data-storage approach (2) already didn't work.
 
-## Keine neuen NPCID/ItemID/BuffID
+## No new NPCID/ItemID/BuffID
 
-`NPCID`/`ItemID`/`BuffID` sind feste `const int`-Konstanten, keine dynamische
-Registrierung wie `ModContent`/`ModItem`/`ModNPC` bei tModLoader Desktop.
-`Main.maxNPCs`, Textur-/Animations-/Stats-Lookup-Arrays sind exakt auf die
-Vanilla-ID-Range dimensioniert — jede ID oberhalb der letzten Vanilla-ID
-fuehrt zu `IndexOutOfRange`/Segfault beim ersten Array-Lookup. Neue IDs sind
-technisch also nicht moeglich, ohne diese Arrays selbst zu vergroessern (was
-wiederum Codepatches an Terrarias eigener Initialisierung braeuchte — siehe
-oben).
+`NPCID`/`ItemID`/`BuffID` are fixed `const int` constants, no dynamic
+registration like `ModContent`/`ModItem`/`ModNPC` in tModLoader Desktop.
+`Main.maxNPCs`, texture/animation/stats lookup arrays are dimensioned
+exactly to the vanilla ID range — any ID above the last vanilla ID causes
+an `IndexOutOfRange`/segfault on the first array lookup. New IDs are
+therefore technically not possible without enlarging these arrays
+themselves (which in turn would need code patches to Terraria's own
+initialization — see above).
 
-## Kein Data-Driven-Content wie bei tModLoader Desktop
+## No data-driven content like tModLoader Desktop
 
-Terraria Mobile ist IL2CPP-kompiliert, **kein JIT zur Laufzeit** — es koennen
-keine neuen Klassen zur Laufzeit erschaffen werden (kein
-`ModContent.Load<T>()`-Aequivalent, keine neuen `Item`/`NPC`-Subklassen).
-Apples JIT-Verbot fuer Drittanbieter-Apps verhindert generell das Erzeugen
-von ausfuehrbarem Speicher zur Laufzeit — ein MelonLoader/Il2CppInterop-
-artiger Ansatz (neue Managed-Types zur Laufzeit registrieren) existiert dafuer
-nicht auf iOS ohne Jailbreak. Content-Erweiterung ist deshalb strukturell
-etwas anderes als bei tModLoader Desktop: nicht "neue Typen definieren",
-sondern bestehende Vanilla-Typen zweckentfremden (Details und Grenzen davon:
-`calamity-architecture.md`, mit dem Vorbehalt oben, dass dessen komplettes
-Hook-basiertes Verhalten-Umschreiben nicht erreichbar war).
+Terraria Mobile is IL2CPP-compiled, **no JIT at runtime** — no new classes
+can be created at runtime (no `ModContent.Load<T>()` equivalent, no new
+`Item`/`NPC` subclasses). Apple's JIT ban for third-party apps generally
+prevents creating executable memory at runtime — a MelonLoader/
+Il2CppInterop-style approach (registering new managed types at runtime)
+doesn't exist for this on iOS without a jailbreak. Content extension is
+therefore structurally something different than in tModLoader Desktop: not
+"define new types", but repurpose existing vanilla types (details and
+limits of that: `calamity-architecture.md`, with the caveat above that its
+complete hook-based behavior rewriting wasn't achievable).
 
-## Zusammenfassung
+## Summary
 
-| Geht | Geht nicht (ohne Jailbreak) |
+| Works | Doesn't work (without jailbreak) |
 |------|------------------------------|
-| Bestehende Properties/Methoden lesen & aufrufen | Verhalten bestehender Methoden aendern (Hooking) |
-| Neue Instanzen bestehender Klassen | Neue Klassen/Typen zur Laufzeit |
-| Neue Rezepte (`AddRecipe`) | Neue NPCID/ItemID/BuffID |
-| Poll-basierte Effekte (God Mode) | Event-/Delegate-Hooks auf Spiel-interne Ablaeufe |
-| UI-Overlay komplett eigenstaendig | Terrarias eigenes UI-System umbauen |
+| Reading & calling existing properties/methods | Changing the behavior of existing methods (hooking) |
+| New instances of existing classes | New classes/types at runtime |
+| New recipes (`AddRecipe`) | New NPCID/ItemID/BuffID |
+| Poll-based effects (God Mode) | Event/delegate hooks into internal game flows |
+| A fully self-contained UI overlay | Rebuilding Terraria's own UI system |

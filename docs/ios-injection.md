@@ -1,73 +1,75 @@
 # iOS Injection Workflow
 
-Kompletter Weg vom Core-Build zum laufenden Overlay auf einem echten,
-nicht-jailbroken Geraet.
+The complete path from a core build to a running overlay on a real,
+non-jailbroken device.
 
-## 1. dylib bauen
+## 1. Build the dylib
 
 ```bash
 ./scripts/build-ios.sh
 ```
 
-Baut `tml_core` (statisch) + `tml_ios_bootstrap` (SHARED, arm64, echtes Device)
-via `cmake/ios.toolchain.cmake` (leetal/ios-cmake), `PLATFORM=OS64`,
-`DEPLOYMENT_TARGET=15.0`. Ergebnis: `build-ios/src/platform/ios/libtml_ios_bootstrap.dylib`.
+Builds `tml_core` (static) + `tml_ios_bootstrap` (SHARED, arm64, real
+device) via `cmake/ios.toolchain.cmake` (leetal/ios-cmake), `PLATFORM=OS64`,
+`DEPLOYMENT_TARGET=15.0`. Result: `build-ios/src/platform/ios/libtml_ios_bootstrap.dylib`.
 
-Voraussetzung: volles Xcode (nicht nur Command Line Tools) — `xcode-select -p`
-muss auf `Xcode.app/Contents/Developer` zeigen, sonst fehlt das iOS-SDK.
+Requirement: full Xcode (not just Command Line Tools) — `xcode-select -p`
+must point at `Xcode.app/Contents/Developer`, otherwise the iOS SDK is
+missing.
 
-## 2. IPA besorgen
+## 2. Get an IPA
 
-Eigene, legal gekaufte Terraria-IPA (z.B. via eigenem Apple-Account
-heruntergeladen/extrahiert). Kein Redistribute, kein Teilen — nur lokale
-Modifikation der eigenen Kopie.
+Your own, legally purchased Terraria IPA (e.g. downloaded/extracted via
+your own Apple account). No redistributing, no sharing — only local
+modification of your own copy.
 
-## 3. dylib in die IPA einbetten
+## 3. Embed the dylib into the IPA
 
-- `libtml_ios_bootstrap.dylib` als eigenes Framework in `Payload/Terraria.app/Frameworks/`
-  ablegen.
-- Der Haupt-Executable braucht einen zusaetzlichen `LC_LOAD_DYLIB`-Load-Command,
-  der auf `@executable_path/Frameworks/libtml_ios_bootstrap.dylib` zeigt
-  (Standard-Technik: `insert_dylib`, oder Feathers eingebauter
-  Tweak-Injection-Mechanismus macht das automatisch beim Resign).
+- Place `libtml_ios_bootstrap.dylib` as its own framework in
+  `Payload/Terraria.app/Frameworks/`.
+- The main executable needs an extra `LC_LOAD_DYLIB` load command pointing
+  at `@executable_path/Frameworks/libtml_ios_bootstrap.dylib` (standard
+  technique: `insert_dylib`, or Feather's built-in tweak injection
+  mechanism does this automatically on resign).
 
-## 4. Signieren via Feather
+## 4. Sign via Feather
 
-Feather (Sideload-Signing-Tool) resignt die komplette modifizierte IPA mit
-einem eigenen Zertifikat/Profil — kein Jailbreak noetig. Feather uebernimmt
-dabei auch das Neu-Signieren der eingebetteten dylib selbst (jede Binaerdatei
-im Bundle braucht eine gueltige Signatur vom selben Signer).
+Feather (a sideload signing tool) resigns the entire modified IPA with your
+own certificate/profile — no jailbreak needed. Feather also re-signs the
+embedded dylib itself (every binary in the bundle needs a valid signature
+from the same signer).
 
-## 5. Installieren + Testen
+## 5. Install + test
 
-Ueber Feather auf das Geraet installieren. Beim Start der App:
+Install onto the device via Feather. When the app starts:
 
-1. dyld laedt alle Frameworks, darunter `libtml_ios_bootstrap.dylib`.
-2. Der `__attribute__((constructor))`-Block in `Bootstrap.mm` feuert automatisch
-   waehrend des dylib-Ladens, **vor** `main()`/`UIApplicationMain()` der App.
-3. `runtime.start()` laeuft synchron.
-4. `dispatch_after(1.5s, ...)` verzoegert die eigentliche UIKit-Arbeit, bis
-   die Host-App ihre UI aufgebaut hat (zu frueh waere `UIApplication.sharedApplication`
-   evtl. noch nicht bereit).
-5. Danach: Overlay-Fenster (`TMLOverlayWindow`, Touch-Passthrough via
-   `hitTest:`-Override), Trigger-Text, natives Settings-Panel.
+1. dyld loads all frameworks, including `libtml_ios_bootstrap.dylib`.
+2. The `__attribute__((constructor))` block in `Bootstrap.mm` fires
+   automatically during dylib loading, **before** the app's `main()`/
+   `UIApplicationMain()`.
+3. `runtime.start()` runs synchronously.
+4. `dispatch_after(1.5s, ...)` delays the actual UIKit work until the host
+   app has built its UI (too early and `UIApplication.sharedApplication`
+   might not be ready yet).
+5. After that: the overlay window (`TMLOverlayWindow`, touch passthrough via
+   `hitTest:` override), trigger text, native settings panel.
 
-## Logging beim Testen
+## Logging while testing
 
-**Wichtig:** `NSLog`/`os_log` statt `printf`/`std::cout` verwenden. Rohes
-stdout eines per Feather (ohne angehaengten Debugger) gestarteten Prozesses
-landet oft nicht in Console.app — `NSLog` dagegen zuverlaessig. Diese
-Erkenntnis kam aus echtem Debugging, siehe `il2cpp-bridge.md`.
+**Important:** use `NSLog`/`os_log` instead of `printf`/`std::cout`. Raw
+stdout of a process started via Feather (without an attached debugger) often
+doesn't end up in Console.app — `NSLog` does, reliably. This finding came
+from real debugging, see `il2cpp-bridge.md`.
 
-Testzyklus: `./scripts/build-ios.sh` → dylib neu einbetten/resignen via
-Feather → neu installieren → Console.app (Geraet auswaehlen, nach `[Il2CppBridge]`
-/ `[iOS Bootstrap]` / `[TMLOverlayManager]` filtern).
+Test cycle: `./scripts/build-ios.sh` → re-embed/resign the dylib via
+Feather → reinstall → Console.app (select the device, filter for
+`[Il2CppBridge]` / `[iOS Bootstrap]` / `[TMLOverlayManager]`).
 
-## Grenze dieses Injection-Wegs
+## Limitation of this injection path
 
-Dieser komplette Weg (Feather/`insert_dylib`, kein Jailbreak) erlaubt reines
-**Hinzufuegen** von Code (die eigene dylib) und **Aufrufen** bestehender
-Terraria-Methoden ueber die IL2CPP-Bridge — er erlaubt nicht das
-**Veraendern** von bestehendem Terraria-Code zur Laufzeit (Codesigning/W^X
-verhindert das unabhaengig vom gewaehlten Hooking-Ansatz). Details und
-getestete Ansaetze: `technical-limitations.md`.
+This entire path (Feather/`insert_dylib`, no jailbreak) allows purely
+**adding** code (your own dylib) and **calling** existing Terraria methods
+via the IL2CPP bridge — it does not allow **changing** existing Terraria
+code at runtime (codesigning/W^X prevents that regardless of the chosen
+hooking approach). Details and tested approaches:
+`technical-limitations.md`.

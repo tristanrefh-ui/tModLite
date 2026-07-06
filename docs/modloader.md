@@ -1,22 +1,22 @@
-# ModLoader — Ordner-Scan
+# ModLoader — folder scan
 
-## Wie der Scan funktioniert
+## How the scan works
 
 `ModLoader::scanDirectory(path)` (`src/core/ModLoader.cpp`):
 
-1. Iteriert alle direkten Unterordner von `path`.
-2. Sucht in jedem Unterordner nach `manifest.json`.
-3. Parst sie via `nlohmann::json`. Fehlt die Datei oder ist sie kein
-   gueltiges JSON, wird der Ordner uebersprungen (kein Absturz).
-4. Legt pro gueltigem Manifest einen reinen Metadaten-`Entry` an
-   (`mod == nullptr` — kein Code, nur Name/Version/enabled-Flag).
-5. Gibt die Anzahl neu gefundener Mods zurueck.
+1. Iterates all direct subfolders of `path`.
+2. Looks for `manifest.json` in each subfolder.
+3. Parses it via `nlohmann::json`. If the file is missing or isn't valid
+   JSON, the folder is skipped (no crash).
+4. Creates a pure metadata `Entry` per valid manifest (`mod == nullptr` — no
+   code, just name/version/enabled flag).
+5. Returns the number of newly found mods.
 
-Gescannte Eintraege landen in derselben Liste wie ueber `registerMod()`
-registrierte echte Mods (siehe `architecture.md`) — `modCount()`/`modName()`/
-`modVersion()`/`isModEnabled()` behandeln beide Arten gleich.
+Scanned entries end up in the same list as real mods registered via
+`registerMod()` (see `architecture.md`) — `modCount()`/`modName()`/
+`modVersion()`/`isModEnabled()` treat both kinds the same.
 
-## manifest.json-Format
+## manifest.json format
 
 ```json
 {
@@ -26,38 +26,38 @@ registrierte echte Mods (siehe `architecture.md`) — `modCount()`/`modName()`/
 }
 ```
 
-- `name` (string) — **Pflichtfeld**. Fehlt es oder ist es kein String, wird
-  der Ordner uebersprungen.
-- `version` (string) — optional, Default `"0.0"`.
-- `enabled` (bool) — optional, Default `true`.
+- `name` (string) — **required**. If it's missing or not a string, the
+  folder is skipped.
+- `version` (string) — optional, default `"0.0"`.
+- `enabled` (bool) — optional, default `true`.
 
-## Neue Mod hinzufuegen
+## Adding a new mod
 
-1. Neuen Ordner unter `mods/<ModName>/` anlegen.
-2. `manifest.json` mit mindestens `name` reinlegen.
-3. Fertig — wird beim naechsten `scanDirectory("mods/")`-Aufruf automatisch
-   gefunden (Desktop-Sim: `src/sim/main.cpp`, iOS: `Bootstrap.mm`).
+1. Create a new folder under `mods/<ModName>/`.
+2. Drop in a `manifest.json` with at least `name`.
+3. Done — it's automatically found on the next `scanDirectory("mods/")`
+   call (desktop sim: `src/sim/main.cpp`, iOS: `Bootstrap.mm`).
 
-Aktuell im Repo: `mods/QuickHeal/` (enabled) und `mods/InfiniteAmmo/`
-(disabled) — beides Fake-Mods ohne echte Spiellogik, nur zum Testen der
-Scan-/Anzeige-/Toggle-Pipeline.
+Currently in the repo: `mods/QuickHeal/` (enabled) and `mods/InfiniteAmmo/`
+(disabled) — both fake mods with no real game logic, only for testing the
+scan/display/toggle pipeline.
 
-## Wo iOS scannt
+## Where iOS scans
 
-Auf einem echten Geraet ohne Jailbreak ist der App-eigene Bundle-Ordner
-nicht beschreibbar. `Bootstrap.mm` scannt deshalb
-`<App-Documents>/mods` (via `NSSearchPathForDirectoriesInDomains`) —
-der einzige Ort, an den man ohne Jailbreak schreiben kann (z.B. ueber die
-Dateien-App oder Datei-Freigabe via Finder/iTunes). Auf einem frischen
-Geraet ohne manuell kopierte Mod-Ordner ist das Ergebnis korrekterweise
-leer ("Keine Mods geladen") — kein Fake-Wert, ein echter leerer Scan.
+On a real device without a jailbreak, the app's own bundle folder isn't
+writable. `Bootstrap.mm` therefore scans `<App-Documents>/mods` (via
+`NSSearchPathForDirectoriesInDomains`) — the only place you can write to
+without a jailbreak (e.g. via the Files app or file sharing through
+Finder/iTunes). On a fresh device with no manually copied mod folders, the
+result is correctly empty ("no mods loaded") — not a fake value, a genuinely
+empty scan.
 
-## Aktueller Stand / Grenze
+## Current state / limitation
 
-Das ist reine **Metadaten- und Toggle-Verwaltung**. `toggleMod(name)` kippt
-nur das `enabled`-Flag im `ModLoader` — es fuehrt **keinen** Mod-Code aus,
-weil die gescannten Eintraege gar keinen Code haben (`mod == nullptr`).
-QuickHeal und InfiniteAmmo tun also (noch) nichts, wenn sie aktiviert werden.
+This is purely **metadata and toggle management**. `toggleMod(name)` only
+flips the `enabled` flag in the `ModLoader` — it runs **no** mod code,
+because the scanned entries have no code at all (`mod == nullptr`).
+QuickHeal and InfiniteAmmo therefore do (still) nothing when enabled.
 
-Echtes Laden von Mod-Code aus dem Ordner ist die naechste Ausbaustufe —
-siehe `roadmap.md`.
+Actually loading mod code from the folder is the next stage — see
+`roadmap.md`.
