@@ -3,3 +3,13 @@ build-ios*/
 build-android/
 cmake-build-*/
 .DS_Store
+
+# IDE (JetBrains) - lokale Projektkonfiguration, nicht fuer Public Repo gedacht
+.idea/
+
+# Claude Code lokale Permissions (enthaelt absolute Pfade dieser Maschine)
+.claude/settings.local.json
+
+# Terraria-UI-Referenzscreenshot (moegliches Re-Logic-Copyright, siehe docs/) -
+# bleibt lokal als Referenz, nicht im oeffentlichen Repo
+reference/terraria_menu.jpeg
