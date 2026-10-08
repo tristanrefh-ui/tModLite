@@ -1,0 +1,43 @@
+name: Xcode - Build and Analyze
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: Build and analyse default scheme using xcodebuild command
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Force Exact Xcode.app Path String
+        run: |
+          REAL_DEVELOPER_DIR=$(xcode-select -p)
+          REAL_XCODE_PATH=$(echo "$REAL_DEVELOPER_DIR" | sed 's/\/Contents\/Developer//')
+          echo "Found pre-installed Xcode location at: $REAL_XCODE_PATH"
+          
+          sudo ln -sf "$REAL_XCODE_PATH" /Applications/Xcode.app
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          
+          echo "Successfully forced path to:"
+          xcode-select -p
+
+      - name: Make script executable
+        run: |
+          chmod +x ./build-ios.sh
+
+      - name: Run iOS Build Script
+        run: |
+          ./build-ios.sh
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-app-binary
+          path: "**/*.ipa"
+          if-no-files-found: error
