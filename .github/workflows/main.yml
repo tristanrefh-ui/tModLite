@@ -1,5 +1,0 @@
-      - name: Make script executable
-        run: chmod +x ./build-ios.sh
-
-      - name: Run iOS Build Script
-        run: ./build-ios.sh
