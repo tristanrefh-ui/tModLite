@@ -1,0 +1,16 @@
+name: iOS Build and Release
+on:
+  push:
+    branches: [ main ]
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Enforce Xcode Developer Path
+        run: DEVELOPER_DIR=$(xcode-select -p); echo "Using Xcode Path:$DEVELOPER_DIR"; if [[ "$DEVELOPER_DIR" != *".app/Contents/Developer"* ]]; then echo "Error: Not a full Xcode app path"; exit 1; fi
+      - name: Make script executable
+        run: chmod +x ./build-ios.sh
+      - name: Run iOS Build Script
+        run: ./build-ios.sh
